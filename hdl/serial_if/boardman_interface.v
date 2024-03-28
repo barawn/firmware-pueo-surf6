@@ -22,6 +22,9 @@ module boardman_interface(
         // 11: reserved
         input [1:0]   burst_size_i,
         
+        // address input, if used
+        input [7:0] address_i,
+        
         input BM_RX,
         output BM_TX        
     );
@@ -31,6 +34,8 @@ module boardman_interface(
             
     parameter CLOCK_RATE = 100000000;
     parameter BAUD_RATE = 1000000;    
+ 
+    parameter USE_ADDRESS = "FALSE";
  
     reg en = 0;
     reg wr = 0;
@@ -93,6 +98,9 @@ module boardman_interface(
         
     localparam FSM_BITS=5;
     localparam [FSM_BITS-1:0] IDLE=0;
+    // extra states if we use addressed mode
+    localparam [FSM_BITS-1:0] ADDRESS_CHECK = 24;
+    localparam [FSM_BITS-1:0] ADDRESS_DUMP = 25;
     // address comes in big-endian, just freaking because
     localparam [FSM_BITS-1:0] ADDR2=1;
     localparam [FSM_BITS-1:0] ADDR1=2;
@@ -121,9 +129,19 @@ module boardman_interface(
     // yikes this is big
     reg [FSM_BITS-1:0] state = RESET0;
 
+    wire [FSM_BITS-1:0] FIRST_STATE = (USE_ADDRESS == "TRUE") ? ADDRESS_CHECK : ADDR2;
+
     always @(posedge clk) begin
         case (state)
-            IDLE: if (axis_rx_tvalid && !axis_rx_tlast && !axis_rx_tuser) state <= ADDR2;
+            IDLE: if (axis_rx_tvalid && !axis_rx_tlast && !axis_rx_tuser) state <= FIRST_STATE;
+            ADDRESS_CHECK: if (axis_rx_tvalid) begin
+                if (axis_rx_tlast || axis_rx_tuser) state <= IDLE;
+                else begin
+                    if (axis_rx_tdata == address_i) state <= ADDR2;
+                    else state <= ADDRESS_DUMP;
+                end
+            end
+            ADDRESS_DUMP: if (axis_rx_tvalid && (axis_rx_tlast || axis_rx_tuser)) state <= IDLE;
             ADDR2: if (axis_rx_tvalid) begin
                 if (axis_rx_tlast || axis_rx_tuser) state <= IDLE;
                 else state <= ADDR1;
@@ -398,7 +416,7 @@ module boardman_interface(
     // The state names describe what's currently on the TDATA busses.
     wire idle_dump = (state == IDLE && axis_rx_tvalid && (axis_rx_tlast || axis_rx_tuser));
     
-    assign axis_rx_tready = (state == ADDR2 || state == ADDR1 || 
+    assign axis_rx_tready = (state == ADDRESS_CHECK || state == ADDRESS_DUMP || state == ADDR2 || state == ADDR1 || 
                              state == ADDR0 || state == READLEN ||
                              state == WRITE0 || state == WRITE1 || state == WRITE2 ||
                              state == WRITE3 || idle_dump);

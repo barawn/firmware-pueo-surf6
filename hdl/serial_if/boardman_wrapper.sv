@@ -9,6 +9,9 @@ module boardman_wrapper(
         // if burst bit is set, this controls the type of access
         input [1:0] burst_size_i,
         
+        // address input if used
+        input [7:0] address_i,
+        
         input RX,
         output TX
     );
@@ -16,12 +19,14 @@ module boardman_wrapper(
     parameter SIMULATION = "FALSE";
     parameter CLOCK_RATE = 40000000;
     parameter BAUD_RATE = 115200;
+    parameter USE_ADDRESS = "FALSE";
     
     assign wb_adr_o[1:0] = 2'b00;
     assign wb_cyc_o = wb_stb_o;
     boardman_interface #(.SIMULATION(SIMULATION),
                          .CLOCK_RATE(CLOCK_RATE),
                          .BAUD_RATE(BAUD_RATE),
+                         .USE_ADDRESS(USE_ADDRESS),
                          .DEBUG("FALSE"))
         u_dev(.clk(wb_clk_i),
               .rst(wb_rst_i),
@@ -33,6 +38,9 @@ module boardman_wrapper(
               .wstrb_o(wb_sel_o),
               .ack_i(wb_ack_i || wb_rty_i || wb_err_i),
               .burst_size_i(burst_size_i),
+              
+              .address_i(address_i),
+              
               .BM_RX(RX),
               .BM_TX(TX));           
 endmodule
