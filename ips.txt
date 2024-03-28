@@ -1,0 +1,2 @@
+ip/debug/cobs_ila/cobs_ila.xci
+ip/clock/sysclk_wiz/sysclk_wiz.xci
