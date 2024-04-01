@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 `include "interfaces.vh"
-
+`define DLYFF #0.5
 // Core logic for the boardman interface
 // This takes an AXI4-stream input for commanding
 // and generates an AXI4-stream output for responses
@@ -91,79 +91,79 @@ module boardman_v2_sm(
 
     always @(posedge clk) begin
         case (state)
-            IDLE: if (axis_rx_tvalid && !axis_rx_tlast && !axis_rx_tuser) state <= FIRST_STATE;
+            IDLE: if (axis_rx_tvalid && !axis_rx_tlast && !axis_rx_tuser) state <= `DLYFF FIRST_STATE;
             ADDRESS_CHECK: if (axis_rx_tvalid) begin
-                if (axis_rx_tlast || axis_rx_tuser) state <= IDLE;
+                if (axis_rx_tlast || axis_rx_tuser) state <= `DLYFF IDLE;
                 else begin
-                    if (axis_rx_tdata == address_i) state <= ADDR2;
-                    else state <= ADDRESS_DUMP;
+                    if (axis_rx_tdata == address_i) state <= `DLYFF ADDR2;
+                    else state <= `DLYFF ADDRESS_DUMP;
                 end
             end
-            ADDRESS_DUMP: if (axis_rx_tvalid && (axis_rx_tlast || axis_rx_tuser)) state <= IDLE;
+            ADDRESS_DUMP: if (axis_rx_tvalid && (axis_rx_tlast || axis_rx_tuser)) state <= `DLYFF IDLE;
             ADDR2: if (axis_rx_tvalid) begin
-                if (axis_rx_tlast || axis_rx_tuser) state <= IDLE;
-                else state <= ADDR1;
+                if (axis_rx_tlast || axis_rx_tuser) state <= `DLYFF IDLE;
+                else state <= `DLYFF ADDR1;
             end
             ADDR1: if (axis_rx_tvalid) begin
-                if (axis_rx_tlast || axis_rx_tuser) state <= IDLE;
-                else state <= ADDR0;
+                if (axis_rx_tlast || axis_rx_tuser) state <= `DLYFF IDLE;
+                else state <= `DLYFF ADDR0;
             end
             ADDR0: if (axis_rx_tvalid) begin
-                if (axis_rx_tlast || axis_rx_tuser) state <= IDLE;
+                if (axis_rx_tlast || axis_rx_tuser) state <= `DLYFF IDLE;
                 else begin
                     if (capture_address[23]) begin
                         // Figure out where we start.
                         // Note that capture_address[1:0] isn't valid yet, grab it from the RX
-                        if (axis_rx_tdata[1:0] == 2'b00) state <= WRITE0;
-                        else if (axis_rx_tdata[1:0] == 2'b01) state <= WRITE1;
-                        else if (axis_rx_tdata[1:0] == 2'b10) state <= WRITE2;
-                        else if (axis_rx_tdata[1:0] == 2'b11) state <= WRITE3;
-                    end else state <= READLEN;
+                        if (axis_rx_tdata[1:0] == 2'b00) state <= `DLYFF WRITE0;
+                        else if (axis_rx_tdata[1:0] == 2'b01) state <= `DLYFF WRITE1;
+                        else if (axis_rx_tdata[1:0] == 2'b10) state <= `DLYFF WRITE2;
+                        else if (axis_rx_tdata[1:0] == 2'b11) state <= `DLYFF WRITE3;
+                    end else state <= `DLYFF READLEN;
                 end
             end
             READLEN: if (axis_rx_tvalid) begin
                 // TLAST *should* be asserted here.
-                if (axis_rx_tuser || !axis_rx_tlast) state <= IDLE;
-                else state <= READADDR2;
+                if (axis_rx_tuser || !axis_rx_tlast) state <= `DLYFF IDLE;
+                else state <= `DLYFF READADDR2;
             end
             // This writes the address back, byte by byte
-            READADDR2: if (axis_tx_tready) state <= READADDR1;
-            READADDR1: if (axis_tx_tready) state <= READADDR0;
-            READADDR0: if (axis_tx_tready) state <= READCAPTURE;
+            READADDR2: if (axis_tx_tready) state <= `DLYFF READADDR1;
+            READADDR1: if (axis_tx_tready) state <= `DLYFF READADDR0;
+            READADDR0: if (axis_tx_tready) state <= `DLYFF READCAPTURE;
             READCAPTURE: if (ack_i) begin
                 // Figure out where we start. Note that 'address' here is
                 // already burst-aligned, so if we're bursting, it'll only go to the appropriate
                 // address.
-                if (address[1:0] == 2'b00) state <= READDATA0;
-                else if (address[1:0] == 2'b01) state <= READDATA1;
-                else if (address[1:0] == 2'b10) state <= READDATA2;
-                else if (address[1:0] == 2'b11) state <= READDATA3;
+                if (address[1:0] == 2'b00) state <= `DLYFF READDATA0;
+                else if (address[1:0] == 2'b01) state <= `DLYFF READDATA1;
+                else if (address[1:0] == 2'b10) state <= `DLYFF READDATA2;
+                else if (address[1:0] == 2'b11) state <= `DLYFF READDATA3;
             end
             // If bursting in byte mode, jump to READCAPTURE to grab data again. Otherwise
             // go to READDATA1.
             READDATA0: if (axis_tx_tready) begin
-                if (!len) state <= IDLE;
-                else if (addr_increment || (burst_size_i != 2'b00)) state <= READDATA1;
-                else state <= READCAPTURE;
+                if (!len) state <= `DLYFF IDLE;
+                else if (addr_increment || (burst_size_i != 2'b00)) state <= `DLYFF READDATA1;
+                else state <= `DLYFF READCAPTURE;
             end
             // If bursting in byte mode OR in word mode (NOT in dword mode) jump to
             // READCAPTURE to grab data again. Otherwise go to READDATA2.
             READDATA1: if (axis_tx_tready) begin
-                if (!len) state <= IDLE;
-                else if (addr_increment || (burst_size_i == 2'b10)) state <= READDATA2;
-                else state <= READCAPTURE;
+                if (!len) state <= `DLYFF IDLE;
+                else if (addr_increment || (burst_size_i == 2'b10)) state <= `DLYFF READDATA2;
+                else state <= `DLYFF READCAPTURE;
             end
             // If bursting in byte mode, jump to READCAPTURE to grab data again. Otherwise
             // go to READDATA3.
             READDATA2: if (axis_tx_tready) begin
-                if (!len) state <= IDLE;
-                else if (addr_increment || (burst_size_i != 2'b00)) state <= READDATA3;
-                else state <= READCAPTURE;
+                if (!len) state <= `DLYFF IDLE;
+                else if (addr_increment || (burst_size_i != 2'b00)) state <= `DLYFF READDATA3;
+                else state <= `DLYFF READCAPTURE;
             end
             // No matter what, go to READCAPTURE to grab next data.
             READDATA3: if (axis_tx_tready) begin
-                if (!len) state <= IDLE;
-                else state <= READCAPTURE;
+                if (!len) state <= `DLYFF IDLE;
+                else state <= `DLYFF READCAPTURE;
             end
             // soooo... this will do wackadoodle things if an
             // error comes in the middle. Maybe buffer the writes.
@@ -177,45 +177,45 @@ module boardman_v2_sm(
             // WRITE3->WRITEEN->WRITE0->WRITE1->WRITE2->WRITE3->WRITEEN
             // which, I guess could be useful
             WRITE0: if (axis_rx_tvalid) begin
-                if (axis_rx_tuser) state <= IDLE;
-                else if (axis_rx_tlast || (!addr_increment && (burst_size_i == 2'b00) )) state <= WRITEEN;
-                else state <= WRITE1;
+                if (axis_rx_tuser) state <= `DLYFF IDLE;
+                else if (axis_rx_tlast || (!addr_increment && (burst_size_i == 2'b00) )) state <= `DLYFF WRITEEN;
+                else state <= `DLYFF WRITE1;
             end
             WRITE1: if (axis_rx_tvalid) begin
-                if (axis_rx_tuser) state <= IDLE;
-                else if (axis_rx_tlast || (!addr_increment && (burst_size_i == 2'b01 || burst_size_i == 2'b00) )) state <= WRITEEN;
-                else state <= WRITE2;
+                if (axis_rx_tuser) state <= `DLYFF IDLE;
+                else if (axis_rx_tlast || (!addr_increment && (burst_size_i == 2'b01 || burst_size_i == 2'b00) )) state <= `DLYFF WRITEEN;
+                else state <= `DLYFF WRITE2;
             end
             WRITE2: if (axis_rx_tvalid) begin
-                if (axis_rx_tuser) state <= IDLE;
-                else if (axis_rx_tlast || (!addr_increment && (burst_size_i == 2'b00) )) state <= WRITEEN;
-                else state <= WRITE3;
+                if (axis_rx_tuser) state <= `DLYFF IDLE;
+                else if (axis_rx_tlast || (!addr_increment && (burst_size_i == 2'b00) )) state <= `DLYFF WRITEEN;
+                else state <= `DLYFF WRITE3;
             end
             WRITE3: if (axis_rx_tvalid) begin
-                if (axis_rx_tuser) state <= IDLE;
-                else state <= WRITEEN;
+                if (axis_rx_tuser) state <= `DLYFF IDLE;
+                else state <= `DLYFF WRITEEN;
             end
             WRITEEN: if (ack_i) begin
-                if (write_last) state <= WRITEADDR2;
+                if (write_last) state <= `DLYFF WRITEADDR2;
                 else if (!addr_increment) begin
                     if (burst_size_i == 2'b00) begin
                         // figure out where we jump back to
-                        if (address[1:0] == 2'b00) state <= WRITE0;
-                        else if (address[1:0] == 2'b01) state <= WRITE1;
-                        else if (address[1:0] == 2'b10) state <= WRITE2;
-                        else if (address[1:0] == 2'b11) state <= WRITE3;                
+                        if (address[1:0] == 2'b00) state <= `DLYFF WRITE0;
+                        else if (address[1:0] == 2'b01) state <= `DLYFF WRITE1;
+                        else if (address[1:0] == 2'b10) state <= `DLYFF WRITE2;
+                        else if (address[1:0] == 2'b11) state <= `DLYFF WRITE3;                
                     end else if (burst_size_i == 2'b01) begin
-                        if (address[1]) state <= WRITE2;
-                        else state <= WRITE3;
-                    end else state <= WRITE0;
-                end else state <= WRITE0;
+                        if (address[1]) state <= `DLYFF WRITE2;
+                        else state <= `DLYFF WRITE3;
+                    end else state <= `DLYFF WRITE0;
+                end else state <= `DLYFF WRITE0;
             end
-            WRITEADDR2: if (axis_tx_tready) state <= WRITEADDR1;
-            WRITEADDR1: if (axis_tx_tready) state <= WRITEADDR0;
-            WRITEADDR0: if (axis_tx_tready) state <= WRITELEN;
-            WRITELEN: if (axis_tx_tready) state <= IDLE;
-            RESET0: state <= RESET1;
-            RESET1: state <= IDLE;
+            WRITEADDR2: if (axis_tx_tready) state <= `DLYFF WRITEADDR1;
+            WRITEADDR1: if (axis_tx_tready) state <= `DLYFF WRITEADDR0;
+            WRITEADDR0: if (axis_tx_tready) state <= `DLYFF WRITELEN;
+            WRITELEN: if (axis_tx_tready) state <= `DLYFF IDLE;
+            RESET0: state <= `DLYFF RESET1;
+            RESET1: state <= `DLYFF IDLE;
         endcase
                 
         // deal with the address increments
