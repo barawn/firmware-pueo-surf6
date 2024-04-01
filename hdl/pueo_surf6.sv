@@ -14,29 +14,29 @@ module pueo_surf6 #(parameter IDENT="SURF",
         // This is 375 MHz, and is stepped down to 62.5 MHz internally
         // for registers, and used to run all the trigger logic.
         // It's 375 MHz because we can't afford the jitter from the MMCM.        
-        input SYSREFCLK_P,
-        input SYSREFCLK_N,
+        input SYSREFCLK_P,  // revA AG17
+        input SYSREFCLK_N,  // revA AH17
         // sysref input, not always running
-        input PL_SYSREF_P,
-        input PL_SYSREF_N,        
+        input PL_SYSREF_P,  // revA F14 single ended
+        input PL_SYSREF_N,  // revA F13 unused
         // input refclk from TURFIO. Not even sure if we'll use it.
-        input RXCLK_P,
-        input RXCLK_N,
+        input RXCLK_P,      // L12N AK16
+        input RXCLK_N,      // L12P AJ17
         // output refclk to TURFIO. again not sure if we'll use it.
-        output TXCLK_P,
-        output TXCLK_N,
+        output TXCLK_P,     // L6P AN18
+        output TXCLK_N,     // L6N AP17
         // input commands from TURFIO
-        input CIN_P,
-        input CIN_N,
+        input CIN_P,        // L4N AM16
+        input CIN_N,        // L4P AL17
         // output responses/trigger data
-        output COUT_P,
-        output COUT_N,
+        output COUT_P,      // L3P AP16
+        output COUT_N,      // L3N AP15
         // data output
-        output DOUT_P,
-        output DOUT_N,
+        output DOUT_P,      // L5N AN17
+        output DOUT_N,      // L5P AM17
         // UART commanding path input. These can be piped through EMIO too.
-        input CMD_RX,
-        output CMD_TX
+        input CMD_RX,       // revA D13
+        output CMD_TX       // revA C13
         // lots o' stuff still missing
     );
 
