@@ -62,6 +62,16 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // The PS can read/write our internal registers by setting an EMIO GPIO
     // and writing the same packets to the serial port that the SFC
     // can send.
+
+    // we have a 22-bit address space, so we can be generous
+
+    // WISHBONE BUSSES
+    // MASTERS
+    `DEFINE_WB_IF( bm_ , 22, 32 );    // serial
+    `DEFINE_WB_IF( tc_ , 22, 32 );    // TURF command
+    // SLAVES
+    
+
     //
     // Note that the UART path is a secondary commanding path, only for use
     // before the high-speed commanding path works. It is also an *addressed*
@@ -83,17 +93,19 @@ module pueo_surf6 #(parameter IDENT="SURF",
     
     wire bm_tx;
     wire bm_rx;
-    
+
+    // Handle the output from the boardman_wrapper    
     assign emio_rx = (emio_sel) ? bm_tx : 1'b0;
     // TX is open drain and inverted UART, w/pull at TURFIO
     // so we drive only when emio_sel is low (no PS access)
     // and bm_tx is high, producing a low.
     // note that RX is standard uart polarity, deal with it
     OBUFT u_tx_obuf(.I(1'b0),.T(emio_sel || ~bm_tx),.O(CMD_TX));
-    // the flop here is b/c the EMIO is a transmitter, we're a receiver
-    assign bm_tx = (emio_sel) ? emio_tx : CMD_RX;
     
-    `DEFINE_WB_IF( bm_ , 22, 32 );    
+    // handle the input to the boardman wrapper
+    // the flop here is b/c the EMIO is a transmitter, we're a receiver
+    assign bm_rx = (emio_sel) ? emio_tx : CMD_RX;
+
     boardman_wrapper #(.USE_ADDRESS("TRUE"))
         u_serial_if(.wb_clk_i(regclk),
                     .wb_rst_i(1'b0),
