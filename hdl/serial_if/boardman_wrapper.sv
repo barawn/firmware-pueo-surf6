@@ -23,7 +23,8 @@ module boardman_wrapper(
     
     assign wb_adr_o[1:0] = 2'b00;
     assign wb_cyc_o = wb_stb_o;
-    boardman_interface #(.SIMULATION(SIMULATION),
+    // v1/v2 can be swapped freely here for checking
+    boardman_interface_v2 #(.SIMULATION(SIMULATION),
                          .CLOCK_RATE(CLOCK_RATE),
                          .BAUD_RATE(BAUD_RATE),
                          .USE_ADDRESS(USE_ADDRESS),
