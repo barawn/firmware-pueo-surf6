@@ -2,9 +2,13 @@ bd/zynq_bd/zynq_bd.bd
 hdl/serial_if/cobs/axis_cobs_decode.v
 hdl/serial_if/cobs/axis_cobs_encode.v
 hdl/serial_if/cobs/axis_fifo.v
-hdl/serial_if/boardman_interface.v
+hdl/serial_if/boardman_interface_v2.v
+hdl/serial_if/boardman_v2_cobs.v
+hdl/serial_if/boardman_v2_sm.v
+hdl/serial_if/boardman_v2_uart.v
 hdl/serial_if/uart/uart_rx6.v
 hdl/serial_if/uart/uart_tx6.v
 hdl/zynq_bd_wrapper.v
 hdl/serial_if/boardman_wrapper.sv
 hdl/pueo_surf6.sv
+hdl/serial_if/boardman_interface.v
