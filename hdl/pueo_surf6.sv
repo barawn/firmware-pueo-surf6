@@ -50,7 +50,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // 62.5 MHz or slower if we need it
     wire regclk;
     wire regclk_locked;    
-    IBUFDS u_ibuf(.I(SYSCLK_P),.IB(SYSCLK_N),.O(sysclk));
+    IBUFDS u_ibuf(.I(SYSREFCLK_P),.IB(SYSREFCLK_N),.O(sysclk));
     sysclk_wiz u_sysclk(.clk_in1(sysclk),.reset(sysclk_reset),
                         .clk_out1(regclk),.locked(regclk_locked));
     // Note that we DO NOT use the PS's AXI4 interface!
