@@ -6,9 +6,11 @@ hdl/serial_if/boardman_interface_v2.v
 hdl/serial_if/boardman_v2_cobs.v
 hdl/serial_if/boardman_v2_sm.v
 hdl/serial_if/boardman_v2_uart.v
+verilog-library-barawn/hdl/obufds_autoinv.v
 hdl/serial_if/uart/uart_rx6.v
 hdl/serial_if/uart/uart_tx6.v
 hdl/zynq_bd_wrapper.v
 hdl/serial_if/boardman_wrapper.sv
 hdl/pueo_surf6.sv
 hdl/serial_if/boardman_interface.v
+verilog-library-barawn/hdl/ibufds_autoinv.v
