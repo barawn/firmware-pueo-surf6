@@ -40,6 +40,12 @@ module pueo_surf6 #(parameter IDENT="SURF",
         // lots o' stuff still missing
     );
 
+    localparam INV_COUT = 1'b0;
+    localparam INV_CIN = 1'b1;
+    localparam INV_DOUT = 1'b1;
+    localparam INV_RXCLK = 1'b1;
+    localparam INV_TXCLK = 1'b0;
+
     localparam [15:0] FIRMWARE_VERSION = { VER_MAJOR, VER_MINOR, VER_REV };
     localparam [31:0] DATEVERSION = { FIRMWARE_DATE, FIRMWARE_VERSION };
     
@@ -127,4 +133,10 @@ module pueo_surf6 #(parameter IDENT="SURF",
                               .GPIO_0_0_tri_i( emio_gpio_i ),
                               .GPIO_0_0_tri_o( emio_gpio_o ),
                               .GPIO_0_0_tri_t( emio_gpio_t ));
+                              
+                              
+    // unused outputs
+    obufds_autoinv #(.INV(INV_COUT)) u_cout(.I(1'b0),.O_P(COUT_P),.O_N(COUT_N));
+    obufds_autoinv #(.INV(INV_TXCLK)) u_txclk(.I(1'b0),.O_P(TXCLK_P),.O_N(TXCLK_N));
+    obufds_autoinv #(.INV(INV_DOUT)) u_dout(.I(1'b0),.O_P(DOUT_P),.O_N(DOUT_N));
 endmodule
