@@ -14,18 +14,20 @@ module zynq_bd_wrapper
     UART_1_0_txd,
     GPIO_0_0_tri_i,
     GPIO_0_0_tri_o,
-    GPIO_0_0_tri_t
+    GPIO_0_0_tri_t,
+    pl_clk0_0    
     );
   input UART_1_0_rxd;
   output UART_1_0_txd;
   input [15:0] GPIO_0_0_tri_i;
   output [15:0] GPIO_0_0_tri_o;
   output [15:0] GPIO_0_0_tri_t;
-
+  output pl_clk0_0;
   zynq_bd zynq_bd_i
        (.UART_1_0_rxd(UART_1_0_rxd),
         .UART_1_0_txd(UART_1_0_txd),
         .GPIO_0_0_tri_i(GPIO_0_0_tri_i),
         .GPIO_0_0_tri_o(GPIO_0_0_tri_o),
-        .GPIO_0_0_tri_t(GPIO_0_0_tri_t));
+        .GPIO_0_0_tri_t(GPIO_0_0_tri_t),
+        .pl_clk0_0(pl_clk0_0));
 endmodule

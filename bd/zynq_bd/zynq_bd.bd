@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x80FA75436E041D0F",
+      "boundary_crc": "0xCD2D4E9BC27A9C36",
       "device": "xczu25dr-ffve1156-1-e",
       "name": "zynq_bd",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
@@ -50,6 +50,34 @@
             "direction": "O",
             "left": "15",
             "right": "0"
+          }
+        }
+      }
+    },
+    "ports": {
+      "pl_clk0_0": {
+        "type": "clk",
+        "direction": "O",
+        "parameters": {
+          "CLK_DOMAIN": {
+            "value": "zynq_bd_zynq_ultra_ps_e_0_0_pl_clk0",
+            "value_src": "default_prop"
+          },
+          "FREQ_HZ": {
+            "value": "99999001",
+            "value_src": "user_prop"
+          },
+          "FREQ_TOLERANCE_HZ": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "PHASE": {
+            "value": "0.0",
+            "value_src": "default"
           }
         }
       }
@@ -429,6 +457,14 @@
         "interface_ports": [
           "UART_1_0",
           "zynq_ultra_ps_e_0/UART_1"
+        ]
+      }
+    },
+    "nets": {
+      "zynq_ultra_ps_e_0_pl_clk0": {
+        "ports": [
+          "zynq_ultra_ps_e_0/pl_clk0",
+          "pl_clk0_0"
         ]
       }
     }
