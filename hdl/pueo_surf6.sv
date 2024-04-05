@@ -112,7 +112,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // the flop here is b/c the EMIO is a transmitter, we're a receiver
     assign bm_rx = (emio_sel) ? emio_tx : CMD_RX;
 
-    boardman_wrapper #(.USE_ADDRESS("TRUE"))
+    // NOTE: FOR INITIAL TESTING ONLY -
+    // NEED TO CREATE A SWITCHING BAUD RATE THINGY
+    boardman_wrapper #(.USE_ADDRESS("TRUE"),
+                       .CLOCK_RATE(62500000),
+                       .BAUD_RATE(1000000))
         u_serial_if(.wb_clk_i(regclk),
                     .wb_rst_i(1'b0),
                     `CONNECT_WBM_IFM( wb_ , bm_ ),
@@ -128,12 +132,17 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire [15:0] emio_gpio_o;
     wire [15:0] emio_gpio_t;
     assign emio_sel = emio_gpio_o[1] && !emio_gpio_t[1];    
+    (* KEEP = "TRUE" *)
+    wire ps_clk;
     zynq_bd_wrapper u_pswrap( .UART_1_0_rxd( emio_rx ),
                               .UART_1_0_txd( emio_tx ),
                               .GPIO_0_0_tri_i( emio_gpio_i ),
                               .GPIO_0_0_tri_o( emio_gpio_o ),
-                              .GPIO_0_0_tri_t( emio_gpio_t ));
-                              
+                              .GPIO_0_0_tri_t( emio_gpio_t ),
+                              .pl_clk0_0(ps_clk));
+
+    uart_vio u_vio(.clk(ps_clk),.probe_in0(emio_sel));
+    uart_ila u_ila(.clk(regclk),.probe0(bm_tx),.probe1(bm_rx));
                               
     // unused outputs
     obufds_autoinv #(.INV(INV_COUT)) u_cout(.I(1'b0),.O_P(COUT_P),.O_N(COUT_N));
