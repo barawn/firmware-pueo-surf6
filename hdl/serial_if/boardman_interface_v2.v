@@ -71,6 +71,18 @@ module boardman_interface_v2(
                              .m_axis_rx_tuser( axis_rx_tuser ),
                              `CONNECT_AXI4S_MIN_IF( s_axis_tx_ , axis_tx_ ),
                              .s_axis_tx_tlast( axis_tx_tlast ));
+    
+    boardman_ila u_ila(.clk(clk),
+                   .probe0( cobs_rx_tdata ),
+                   .probe1( cobs_rx_tvalid ),
+                   .probe2( cobs_rx_tready ),
+                   .probe3( axis_rx_tdata ),
+                   .probe4( axis_rx_tvalid ),
+                   .probe5( axis_rx_tready ),
+                   .probe6( axis_tx_tdata ),
+                   .probe7( axis_tx_tvalid ),
+                   .probe8( axis_tx_tready ));
+
     // to state machine
     boardman_v2_sm #(.DEBUG(DEBUG),
                      .SIMULATION(SIMULATION),
