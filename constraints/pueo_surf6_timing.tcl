@@ -74,3 +74,15 @@ set sync_syncB_regs [get_cells -hier -filter {NAME =~ *SyncB_clkA_reg*}]
 set_max_delay -datapath_only -from $sync_flag_regs -to $sync_sync_regs 10.000
 set_max_delay -datapath_only -from $sync_sync_regs -to $sync_syncB_regs 10.000
 
+# NOTE NOTE
+# THIS MEANS DEBUGGING ONLY WORKS IF PS IS RUNNING
+# guard against dumbassery
+set my_dbg_hub [get_debug_cores dbg_hub -quiet]
+if {[llength $my_dbg_hub] > 0} {
+   set_property C_CLK_INPUT_FREQ_HZ 300000000 $my_dbg_hub
+   set_property C_ENABLE_CLK_DIVIDER false $my_dbg_hub
+   set_property C_USER_SCAN_CHAIN 1 $my_dbg_hub
+   connect_debug_port dbg_hub/clk ps_clk
+} else {
+   puts "skipping debug hub commands, not inserted yet"
+}
