@@ -76,8 +76,21 @@ module pueo_surf6 #(parameter IDENT="SURF",
     `DEFINE_WB_IF( bm_ , 22, 32 );    // serial
     `DEFINE_WB_IF( tc_ , 22, 32 );    // TURF command
     // SLAVES
+    // we have a 22-bit address space here, split up by 12 bits (1024 bytes, 256 32-bit regs)
+    // we AUTOMATICALLY split it in 2 so that the UPPER address range directly goes to
+    // the RF data converter since it wants a 17 bit address space
+    // module 0: ID/ver/hsk/TIO if          0000 - 0FFF
+    // module 1: Notch filter control       1000 - 1FFF
+    // module 2: AGC control                2000 - 2FFF
+    // module 3: Beam threshold/masking     3000 - 3FFF
+    `DEFINE_WB_IF( surf_id_ctrl_ , 12, 32 );
+    `DEFINE_WB_IF( notch_ , 12, 32);
+    `DEFINE_WB_IF( agc_ , 12, 32);
+    `DEFINE_WB_IF( beam_ , 12, 32);
+    `DEFINE_WB_IF( rfdc_ , 17, 32);
     
-
+    
+        
     //
     // Note that the UART path is a secondary commanding path, only for use
     // before the high-speed commanding path works. It is also an *addressed*
@@ -96,6 +109,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire emio_rx;
     wire emio_tx;
     wire emio_sel;
+    wire emio_wake;
     
     wire bm_tx;
     wire bm_rx;
@@ -128,7 +142,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
     assign bm_ack_i = bm_cyc_o && bm_stb_o;
     assign bm_dat_i = (bm_adr_o[2]) ? DATEVERSION : IDENT;        
     
-    wire [15:0] emio_gpio_i = {16{1'b0}};
+    wire [15:0] emio_gpio_i;
+    assign emio_gpio_i[1:0] = 2'b00;
+    assign emio_gpio_i[2] = emio_wake;
+    assign emio_gpio_i[15:3] = {13{1'b0}};
+    
     wire [15:0] emio_gpio_o;
     wire [15:0] emio_gpio_t;
     assign emio_sel = emio_gpio_o[1] && !emio_gpio_t[1];    
@@ -141,7 +159,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                               .GPIO_0_0_tri_t( emio_gpio_t ),
                               .pl_clk0_0(ps_clk));
 
-    uart_vio u_vio(.clk(ps_clk),.probe_in0(emio_sel));
+    uart_vio u_vio(.clk(ps_clk),.probe_in0(emio_sel),.probe_out0(emio_wake));
     uart_ila u_ila(.clk(regclk),.probe0(bm_tx),.probe1(bm_rx));
                               
     // unused outputs

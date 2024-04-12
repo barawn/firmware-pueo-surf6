@@ -1,3 +1,4 @@
+ip/debug/boardman_ila/boardman_ila.xci
 ip/debug/cobs_ila/cobs_ila.xci
 ip/clock/sysclk_wiz/sysclk_wiz.xci
 ip/debug/uart_ila/uart_ila.xci
