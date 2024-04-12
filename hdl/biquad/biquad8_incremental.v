@@ -1,4 +1,16 @@
 `include "dsp_macros.vh"
+
+// This is the incremental processing portion.
+// They take 2 coefficients, and they are the *direct*
+// coefficient of the IIR.
+// So if the denominator is (1 + az^-1 + bz^-2):
+// the write sequence is
+//
+// write 0: a
+// write 1: b
+// update
+// Because all of the incrementals work the same,
+// all 8 get the same data and writes.
 module biquad8_incremental #(parameter NBITS=16,
                              parameter NFRAC=2,
                              parameter NBITS2=24,
@@ -9,7 +21,6 @@ module biquad8_incremental #(parameter NBITS=16,
              input [NBITS2-1:0] y0_in,
              input [NBITS2-1:0] y1_in,
                           
-             input coeff_adr_i,
              input coeff_wr_i,
              input coeff_update_i,
              input [17:0] coeff_dat_i,
@@ -107,11 +118,11 @@ module biquad8_incremental #(parameter NBITS=16,
             always @(posedge clk) begin
                 dat_in_reg <= delay_out;
                 dat_out_reg <= align_out;
-                // It's a cascade, so the low DSP *always* clocks in,
-                // and the high DSP only clocks in if address is high.
-                // Program them in reverse order (from high address to low).
+	        // It's a cascade. We ALWAYS clock in, because we need to load in sequence.
+	        // You cannot individually update one parameter. These registers are pointless
+	        // but whatever.
                 ceblow1 <=  coeff_wr_i;
-                cebhigh1 <= coeff_adr_i && coeff_wr_i;
+                cebhigh1 <= coeff_wr_i;
                 ceblow2 <= coeff_update_i;
                 cebhigh2 <= coeff_update_i;
             end

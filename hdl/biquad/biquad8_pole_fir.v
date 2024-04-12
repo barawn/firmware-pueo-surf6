@@ -7,23 +7,60 @@
 // together, and the outputs of *those* go straight to the recursive
 // guys to be added in.
 // The recursive guys drive the timing so we let them be in a 4-DSP chain.
-// We therefore have 17 DSPs, and chain configure them with a 5-bit address,
-// 4-bits for each DSP chain.
-// y0 gets 0-15,
-// y1 gets 16-23.
+// We therefore have 17 DSPs.
+//
+// Programming is always done by chain. We effectively have 4 chains.
+// F chain, G chain, F cross-link, G cross-link
+//
+// By chain means you need to write to the same address multiple times
+// to load the coefficients.
+//
+// F chain is P^nU(n,cost) up to 6, then -1*P^8 U(6, cost)
+// G chain is P^nU(n,cost) up to 7, then P^8 U(8,cost)
+// F cross-link is P^7 U(7, cost)
+// G cross-link is P^9 U(7, cost)
+//
+// addr 00:
+// write coeff 6: -1*P^8 U(6, cost)
+// write coeff 5: P^6 U(6, cost)
+// write coeff 4: P^5 U(5, cost)
+// write coeff 3: P^4 U(4, cost)
+// write coeff 2: P^3 U(3, cost)
+// write coeff 1: P^2 U(2, cost)
+// write coeff 0: P   U(1, cost)
+// update
+// addr 01:
+// write coeff 7: P^8 U(8, cost)
+// write coeff 6: P^7 U(7, cost)
+// write coeff 5: P^6 U(6, cost)
+// write coeff 4: P^5 U(5, cost)
+// write coeff 3: P^4 U(4, cost)
+// write coeff 2: P^3 U(3, cost)
+// write coeff 1: P^2 U(2, cost)
+// write coeff 0: P   U(1, cost)
+// update
+// addr 02:
+// write P^7 U(7, cost), update
+// addr 03:
+// write P^9 U(7, cost), update
 module biquad8_pole_fir #(parameter NBITS=16, 
                           parameter NFRAC=2,
                           NSAMP=8) (
-        input clk,
-        input [NBITS*NSAMP-1:0] dat_i,
-    
-        input [4:0] coeff_adr_i,
-        input       coeff_wr_i,
-        input       coeff_update_i,
-        input [17:0] coeff_dat_i,
+        input			clk,
+        input [NBITS*NSAMP-1:0]	dat_i,
+
+	// the address here selects
+	// 00 : F chain
+	// 01 : G chain
+	// 10 : F cross-link
+	// 11 : G cross-link
+	input [1:0]		coeff_adr_i, 
+        input			coeff_wr_i,
+        input			coeff_update_i,
+        input [17:0]		coeff_dat_i,
                 
-        output [47:0] y0_out,
-        output [47:0] y1_out
+        output [47:0]		y0_out,
+        output [47:0]		y1_out
     );
     
     // F-chain first. All inputs are registered at the inputs to the IIR. Later inputs have delays.
@@ -77,15 +114,20 @@ module biquad8_pole_fir #(parameter NBITS=16,
     wire [47:0] gpcascade[GLEN-1:0];
     wire [47:0] gpout[GLEN-1:0];
     
-    wire [3:0] coeff_chain_addr = coeff_adr_i[3:0];
     reg coeff_wr_f = 0;
     reg coeff_wr_g = 0;
+    reg	coeff_wr_fcross = 0;
+    reg	coeff_wr_gcross = 0;   
+  
     reg [NBITS-1:0] fin_store = {NBITS{1'b0}};
     reg [NBITS-1:0] fin_store_tmp = {NBITS{1'b0}};
     reg [NBITS-1:0] gin_store = {NBITS{1'b0}};
     always @(posedge clk) begin
-        coeff_wr_f <= coeff_wr_i && !coeff_adr_i[4];
-        coeff_wr_g <= coeff_wr_i && coeff_adr_i[4];
+       coeff_wr_f <= coeff_wr_i && (coeff_adr_i == 2'b00);       
+       coeff_wr_g <= coeff_wr_i && (coeff_adr_i == 2'b01);
+
+       coeff_wr_fcross <= coeff_wr_i && (coeff_adr_i == 2'b10);
+       coeff_wr_gcross <= coeff_wr_i && (coeff_adr_i == 2'b11);       
         
         // The F-chain (used for computing sample 0) takes sample 0. However,
         // it's *shorter* than the G-chain, and so we need to delay it more to
@@ -107,10 +149,9 @@ module biquad8_pole_fir #(parameter NBITS=16,
         genvar fi,fj, gi,gj;
         for (fi=0;fi<FLEN;fi=fi+1) begin : FLOOP
             wire [29:0] dspA_in;
-            reg ceb1 = 0;
+	    wire ceb1 = coeff_wr_f;
             reg ceb2 = 0;
             always @(posedge clk) begin : CEBS
-                ceb1 <= (coeff_wr_f && coeff_chain_addr >= fi);
                 ceb2 <= coeff_update_i;
             end
 
@@ -182,10 +223,8 @@ module biquad8_pole_fir #(parameter NBITS=16,
         end
         for (gi=0;gi<GLEN;gi=gi+1) begin : GLOOP
             wire [29:0] dspA_in;
-            reg ceb1 = 0;
-            reg ceb2 = 0;
+            wire ceb1 = coeff_wr_g;
             always @(posedge clk) begin : CEBS
-                ceb1 <= (coeff_wr_g && coeff_chain_addr >= gi);
                 ceb2 <= coeff_update_i;
             end
             if (gi < GLEN-1) begin : DIRECT
@@ -273,13 +312,11 @@ module biquad8_pole_fir #(parameter NBITS=16,
     // A2 contains g[n-2]
     // MREG contains B*g[n-3]
     // and equivalent.
-    reg ceb1_f = 0;
-    reg ceb1_g = 0;
+    wire ceb1_f = coeff_wr_fcross;
+    wire ceb1_g = coeff_wr_gcross;
     reg ceb2_f = 0;
     reg ceb2_g = 0;
     always @(posedge clk) begin
-        ceb1_f <= (coeff_wr_f) && coeff_chain_addr >= FLEN;
-        ceb1_g <= (coeff_wr_g) && coeff_chain_addr >= GLEN;
         ceb2_f <= coeff_update_i;
         ceb2_g <= coeff_update_i;
     end

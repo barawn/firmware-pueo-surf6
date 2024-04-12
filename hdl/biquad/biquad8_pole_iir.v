@@ -1,7 +1,8 @@
 `timescale 1ns / 1ps
 `include "dsp_macros.vh"
-// We have 4 coefficients, so we take a 2-bit address.
-// The DSPs are arranged in a chain of 4.
+// This is the IIR component of the biquad.
+// It consists of a chain of 4 DSPs.
+
 // We have *2* clocks to deal with this. Which is a bit challenging.
 // Fundamentally we have
 // y0    | A     B | | y0[-2] |   | y0_fir_in |
@@ -29,10 +30,24 @@
 // And then it adds 0.758 to the other, arriving at 6.798, still with slack of 0.7 ns.
 //
 // So this is a useful note for the future: you *can* add through 2 DSPs in one clock, easily.
+
+// So again to be clear"
+// dsp0 takes in dsp1 out + y0_fir_in: this is 'C0' or P^16(U^2(6, cost) - U^2(7, cost))
+// dsp1 takes in dsp3 out : this is 'C1' or            P^15(U(7,cost)(U(8,cost)-U(6,cost)))
+// dsp2 takes in dsp3 out : this is 'C3' or            P^16(U^2(8,cost) - U^2(7,cost))            
+// dsp3 takes in dsp1 out : this is 'C2' or            P^17(U(7,cost)(U(6,cost)-U(8,cost)))
+
+//
+// Chain programs backwards, so:
+//
+// write C2
+// write C3
+// write C1
+// write C0
+// update
 module biquad8_pole_iir #(parameter NBITS=24, parameter NFRAC=10)(
         input clk,
         
-        input [1:0] coeff_adr_i,
         input [17:0] coeff_dat_i,
         input coeff_wr_i,
         input coeff_update_i,
@@ -70,10 +85,7 @@ module biquad8_pole_iir #(parameter NBITS=24, parameter NFRAC=10)(
     reg [3:0] ceb1 = {4{1'b0}};
     reg [3:0] ceb2 = {4{1'b0}};
     always @(posedge clk) begin
-        ceb1[0] <= coeff_wr_i;
-        ceb1[1] <= coeff_wr_i && (coeff_adr_i > 0);
-        ceb1[2] <= coeff_wr_i && (coeff_adr_i > 1);
-        ceb1[3] <= coeff_wr_i && (coeff_adr_i > 2);
+        ceb1 <= {4{coeff_wr_i}};       
         ceb2 <= {4{coeff_update_i}};
     end
     
