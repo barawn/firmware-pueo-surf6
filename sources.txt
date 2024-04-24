@@ -15,3 +15,11 @@ hdl/zynq_bd_wrapper.v
 hdl/serial_if/boardman_wrapper.sv
 hdl/pueo_surf6.sv
 hdl/surf_id_ctrl/surf_id_ctrl.sv
+hdl/clock/simple_clock_mon.sv
+hdl/surf_intercon.sv
+verilog-library-barawn/hdl/wbm_dummy.v
+verilog-library-barawn/hdl/wbs_dummy.v
+verilog-library-barawn/hdl/clk_div_ce.v
+verilog-library-barawn/hdl/dsp_timed_counter.v
+verilog-library-barawn/hdl/wishbone_arbiter.v
+verilog-library-barawn/hdl/round_robin_arbiter.v

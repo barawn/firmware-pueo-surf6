@@ -1,5 +1,7 @@
 ip/debug/boardman_ila/boardman_ila.xci
 ip/debug/cobs_ila/cobs_ila.xci
+ip/debug/intercon_ila/intercon_ila.xci
+ip/rf/rfdc_gen1/rfdc_gen1.xci
 ip/clock/sysclk_wiz/sysclk_wiz.xci
 ip/debug/uart_ila/uart_ila.xci
 ip/debug/uart_vio/uart_vio.xci

@@ -24,3 +24,8 @@ set_property -dict { PACKAGE_PIN AM17 IOSTANDARD LVDS } [get_ports DOUT_N]
 set_property -dict { PACKAGE_PIN D13 IOSTANDARD LVCMOS33 } [get_ports CMD_RX]
 set_property -dict { PACKAGE_PIN C13 IOSTANDARD LVCMOS33 } [get_ports CMD_TX]
 
+set_property -dict { PACKAGE_PIN M28 } [get_ports { B128_CLK_P[0] }]
+set_property -dict { PACKAGE_PIN M29 } [get_ports { B128_CLK_N[0] }]
+set_property -dict { PACKAGE_PIN K28 } [get_ports { B128_CLK_P[1] }]
+set_property -dict { PACKAGE_PIN K29 } [get_ports { B128_CLK_N[1] }]
+

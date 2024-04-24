@@ -4,11 +4,13 @@
 module surf_id_ctrl(
         input wb_clk_i,
         input wb_rst_i,
-        `TARGET_NAMED_PORTS_WB_IF( wb_ , 12, 32),
+        `TARGET_NAMED_PORTS_WB_IF( wb_ , 11, 32),
         
+                
+        input if_clk_i,     // 125 MHz
         input sys_clk_i,    // 375 MHz
         input gtp_clk_i,    // GTP clock
-        input rx_clk_i,     // Receive clock from TURFIO
+        input rx_clk_i,     // receive clock from TURF
         input clk300_i      // 300 MHz used for IDELAYCTRL
     );
     
@@ -90,10 +92,10 @@ module surf_id_ctrl(
     DNA_PORTE2 u_dina(.DIN(1'b0),.READ(dna_read),.SHIFT(dna_shift),.CLK(wb_clk_i),.DOUT(dna_data));
 
     wire [3:0] clk_running;
-    wire sel_clkmon = (wb_cyc_i && wb_stb_i && (wb_adr_i[6 +: 6] == 6'h01));
+    wire sel_clockmon = (wb_cyc_i && wb_stb_i && wb_adr_i[6]);
     
     simple_clock_mon #(.NUM_CLOCKS(4))
-        u_clockmon( .clk_i(wb_clk_i),
+        u_clkmon( .clk_i(wb_clk_i),
                     .adr_i(wb_adr_i[2 +: 3]),
                     .en_i(sel_clockmon),
                     .wr_i(wb_we_i),
