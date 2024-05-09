@@ -59,6 +59,12 @@ proc set_ignore_paths { srcClk dstClk ctlist } {
 set sysrefclk [create_clock -period 2.667 -name sysref_clk [get_ports -filter { NAME =~ "SYSREFCLK_P" && DIRECTION == "IN" }]]
 set clktypes($sysrefclk) SYSREFCLK
 
+# we can set BOTH of these to the same clktype because only one gets used:
+# the only reason we have a name/type hash is to allow getting the period of the clock automatically
+# this follows SYSCLK_N because the clock is inverted
+set sysclk [create_clock -period 2.667 -name sys_clk [get_ports -filter { NAME =~ "SYSCLK_N" && DIRECTION == IN }]]
+set clktypes($sysclk) SYSREFCLK
+
 set rxclk [create_clock -period 8.00 -name rxclk_clk [get_ports -filter { NAME =~ "RXCLK_P" && DIRECTION == "IN" }]]
 set clktypes($rxclk) RXCLK
 
@@ -70,8 +76,8 @@ set clktypes($gtpclk1) GTPCLK1
 
 # GENERATED CLOCKS
 
-set ifclk [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "if_clk"}]]
-set clktypes($slowclk) IFCLK
+set ifclk [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "ifclk"}]]
+set clktypes($ifclk) IFCLK
 
 set clk300 [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "clk300"}]]
 set clktypes($clk300) CLK300
