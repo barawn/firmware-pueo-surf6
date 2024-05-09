@@ -6,17 +6,22 @@ module surf_id_ctrl(
         input wb_rst_i,
         `TARGET_NAMED_PORTS_WB_IF( wb_ , 11, 32),
         
-                
-        input if_clk_i,     // 125 MHz
-        input sys_clk_i,    // 375 MHz
+        output aclk_ok_o,
+        output rxclk_ok_o,
+        output gtpclk_ok_o,
+                                
+        input aclk_i,    // 375 MHz
+        input ifclk_i,     // 125 MHz
         input gtp_clk_i,    // GTP clock
-        input rx_clk_i,     // receive clock from TURF
+        input rxclk_i,     // receive clock from TURF
         input clk300_i      // 300 MHz used for IDELAYCTRL
     );
     
     parameter [31:0] DEVICE = "SURF";
     parameter [31:0] VERSION = {32{1'b0}};
     parameter WB_CLK_TYPE = "PSCLK";
+    
+    parameter WB_ADR_BITS = 11;
     
     wire dna_data;
     reg dna_shift = 0;
@@ -25,7 +30,7 @@ module surf_id_ctrl(
     wire [31:0] ctrlstat_reg;
     assign ctrlstat_reg = {32{1'b0}};
     
-    wire sel_internal = (wb_adr_i[6 +: 6] == 0);
+    wire sel_internal = (wb_adr_i[6 +: (WB_ADR_BITS-6)] == 0);
     wire [31:0] wishbone_registers[15:0];
     
         // Convenience stuff. These allow setting up wishbone registers easier.
@@ -94,7 +99,7 @@ module surf_id_ctrl(
     wire [3:0] clk_running;
     wire sel_clockmon = (wb_cyc_i && wb_stb_i && wb_adr_i[6]);
     
-    simple_clock_mon #(.NUM_CLOCKS(4))
+    simple_clock_mon #(.NUM_CLOCKS(5))
         u_clkmon( .clk_i(wb_clk_i),
                     .adr_i(wb_adr_i[2 +: 3]),
                     .en_i(sel_clockmon),
@@ -103,11 +108,16 @@ module surf_id_ctrl(
                     .dat_o(dat_clockmon),
                     .ack_o(ack_clockmon),
                     .clk_running_o(clk_running),
-                    .clk_mon_i( { clk300_i ,
-                                  rx_clk_i ,
+                    .clk_mon_i( { ifclk_i,
+                                  clk300_i ,
+                                  rxclk_i ,
                                   gtp_clk_i,
-                                  sys_clk_i } ));
+                                  aclk_i } ));
 
+    assign aclk_ok_o = clk_running[0];
+    assign gtpclk_ok_o = clk_running[1];
+    assign rxclk_ok_o = clk_running[2];
+    
     assign wb_ack_o = (wb_adr_i[6]) ? ack_clockmon : ack_internal;
     assign wb_err_o = 1'b0;
     assign wb_rty_o = 1'b0;
