@@ -11,7 +11,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                         parameter INV_DOUT = 1'b0)(
         input wb_clk_i,
         input wb_rst_i,
-        `TARGET_NAMED_PORTS_WB_IF(wb_ , 6, 32),
+        `TARGET_NAMED_PORTS_WB_IF(wb_ , 11, 32),
 
         input aclk_i,
         input aclk_ok_i,
