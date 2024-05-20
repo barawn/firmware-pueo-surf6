@@ -17,6 +17,14 @@ proc set_cc_paths { srcClk dstClk ctlist } {
     set maxTime [get_property PERIOD $srcClk]
     set srcRegs [get_cells -hier -filter "CUSTOM_CC_SRC == $srcType"]
     set dstRegs [get_cells -hier -filter "CUSTOM_CC_DST == $dstType"]
+    if {[llength $srcRegs] == 0} {
+        puts "set_cc_paths: No registers flagged with CUSTOM_CC_SRC $srcType: returning."
+        return
+    }
+    if {[llength $dstRegs] == 0} {
+        puts "set_cc_paths: No registers flagged with CUSTOM_CC_DST $dstType: returning."
+        return
+    }
     set_max_delay -datapath_only -from $srcRegs -to $dstRegs $maxTime
 }
 
@@ -34,6 +42,14 @@ proc set_gray_paths { srcClk dstClk ctlist } {
     set maxSkew [expr min([get_property PERIOD $srcClk], [get_property PERIOD $dstClk])]
     set srcRegs [get_cells -hier -filter "CUSTOM_GRAY_SRC == $ctypes($srcClk)"]
     set dstRegs [get_cells -hier -filter "CUSTOM_GRAY_DST == $ctypes($dstClk)"]
+    if {[llength $srcRegs] == 0} {
+        puts "set_gray_paths: No registers flagged with CUSTOM_GRAY_SRC $srcType: returning."
+        return
+    }
+    if {[llength $dstRegs] == 0} {
+        puts "set_gray_paths: No registers flagged with CUSTOM_GRAY_DST $dstType: returning."
+        return
+    }
     set_max_delay -datapath_only -from $srcRegs -to $dstRegs $maxTime
     set_bus_skew -from $srcRegs -to $dstRegs $maxSkew
 }
@@ -50,6 +66,14 @@ proc set_ignore_paths { srcClk dstClk ctlist } {
     array set ctypes $ctlist
     set srcRegs [get_cells -hier -filter "CUSTOM_IGN_SRC == $ctypes($srcClk)"]
     set dstRegs [get_cells -hier -filter "CUSTOM_IGN_DST == $ctypes($dstClk)"]
+    if {[llength $srcRegs] == 0} {
+        puts "set_ignore_paths: No registers flagged with CUSTOM_IGN_SRC $srcType: returning."
+        return
+    }
+    if {[llength $dstRegs] == 0} {
+        puts "set_ignore_paths: No registers flagged with CUSTOM_IGN_DST $dstType: returning."
+        return
+    }
     set_false_path -from $srcRegs -to $dstRegs
 }
 
@@ -65,7 +89,10 @@ set clktypes($sysrefclk) SYSREFCLK
 set sysclk [create_clock -period 2.667 -name sys_clk [get_ports -filter { NAME =~ "SYSCLK_N" && DIRECTION == IN }]]
 set clktypes($sysclk) SYSREFCLK
 
-set rxclk [create_clock -period 8.00 -name rxclk_clk [get_ports -filter { NAME =~ "RXCLK_P" && DIRECTION == "IN" }]]
+# If we want RXCLK/ACLK timed together, we need to compensate for the
+# difference in their clock network routing. Otherwise it tries to use
+# it to help.
+set rxclk [create_clock -period 8.00 -waveform { 0.9 4.9 } -name rxclk_clk [get_ports -filter { NAME =~ "RXCLK_P" && DIRECTION == "IN" }]]
 set clktypes($rxclk) RXCLK
 
 set gtpclk0 [create_clock -period 8.00 -name gtpclk0_clk [get_ports -filter { NAME =~ "B128_CLK_P[0]" && DIRECTION == "IN" }]]
@@ -81,6 +108,9 @@ set clktypes($ifclk) IFCLK
 
 set clk300 [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "clk300"}]]
 set clktypes($clk300) CLK300
+
+set psclk [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "ps_clk" }]]
+set clktypes($psclk) PSCLK
 
 # create clktypelist variable to save
 set clktypelist [array get clktypes]
@@ -103,6 +133,35 @@ set clockmon_run_cc_regs [get_cells -hier -filter {NAME=~ *u_clkmon/clk_running_
 set_max_delay -datapath_only -from $clockmon_level_regs -to $clockmon_cc_regs 10.000
 set_max_delay -datapath_only -from $clockmon_run_reset_regs -to $clockmon_run_regs 10.000
 set_max_delay -datapath_only -from $clockmon_run_regs -to $clockmon_run_cc_regs 10.000
+
+# weirdo clock transfer regs
+set xfr_src_aclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_SOURCE=="ACLK"}]
+set xfr_src_rxclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_SOURCE=="RXCLK"}]
+set xfr_tgt_aclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_TARGET=="ACLK"}]
+set xfr_tgt_rxclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_TARGET=="RXCLK"}]
+if { [llength $xfr_src_aclk] != 0 } {
+        # FROM sysclk TO rxclk is multicycle b/c rxclk is forward-delayed
+        # i.e. we want from clock at 0 to clock at 3.567 b/c *internally* that
+        # ends up roughly the same due to the -2.8 ns shift
+#        set_multicycle_path 2 -from $xfr_src_aclk -to $xfr_tgt_rxclk
+#        set_multicycle_path 1 -from $xfr_src_aclk -to $xfr_tgt_rxclk -hold
+        set_max_delay -datapath_only -from $xfr_src_aclk -to $xfr_tgt_rxclk 1.33
+        set_max_delay -datapath_only -from $xfr_src_rxclk -to $xfr_tgt_aclk 1.33
+        set_bus_skew -from $xfr_src_rxclk -to $xfr_tgt_aclk 0.1
+        # FROM rxclk TO sysclk is NOT multicycle: there we want
+        # from clock 0.9 to 2.667.
+}
+
+
+# and now we use the magics to handle the CC paths in the TURFIO module
+set_cc_paths $sysclk $psclk $clktypelist
+set_cc_paths $psclk $sysclk $clktypelist
+
+set_cc_paths $psclk $clk300 $clktypelist
+set_cc_paths $clk300 $psclk $clktypelist
+
+set_cc_paths $psclk $rxclk $clktypelist
+set_cc_paths $rxclk $psclk $clktypelist
 
 # NOTE NOTE
 # THIS MEANS DEBUGGING ONLY WORKS IF PS IS RUNNING
