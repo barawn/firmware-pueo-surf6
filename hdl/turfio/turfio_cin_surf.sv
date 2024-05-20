@@ -24,6 +24,8 @@ module turfio_cin_surf #(parameter INV=1'b0,
         input CIN_N
     );
     
+    parameter DEBUG = "TRUE";
+    
     // both a source and destination for cross-clock
     (* CUSTOM_CC_SRC = CLKTYPE, CUSTOM_CC_DST = CLKTYPE *)
     reg [8:0] delay_cntvalueout = {9{1'b0}};
@@ -186,4 +188,11 @@ module turfio_cin_surf #(parameter INV=1'b0,
     end            
 
     assign delay_cntvalueout_o = delay_cntvalueout;    
+
+    generate
+        if (DEBUG == "TRUE") begin : ILA
+            cin_ila u_ila(.clk(rxclk_i),.probe0(data_o));
+        end
+    endgenerate
+
 endmodule

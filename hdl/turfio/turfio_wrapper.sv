@@ -15,14 +15,28 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
 
         input aclk_i,
         input aclk_ok_i,
+        // The turfio wrapper handles the memclk/ifclk PLL
+        // as well, since it needs to get ifclk phased up
+        // to rxclk.
         input aclk_locked_i,
+        output aclk_reset_o,
         output clk300_o,
         
+        // oh this is such a pain
         input ifclk_i,
         input ifclk_x2_i,
+        input memclk_i,
+        
+        output aclk_sync_o,
+        output memclk_sync_o,        
 
         output rxclk_o,
         input rxclk_ok_i,
+
+        output [31:0] command_o,
+        output command_valid_o,
+        input [31:0] response_i,
+        input response_valid_i,
 
         input RXCLK_P,
         input RXCLK_N,
@@ -51,14 +65,14 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     obufds_autoinv #(.INV(INV_DOUT)) u_dout(.I(ifclk_out),.O_P(DOUT_P),.O_N(DOUT_N));    
 
 
-
     // Register core outputs
     wire ps_en;
     wire ps_done;
     wire mmcm_locked;
     wire mmcm_rst;
     wire capture_err;
-
+    wire align_err;
+    
     wire cin_rst;
     wire en_vtc;
     wire delay_load;
@@ -80,9 +94,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     wire lock_status;
     
     wire [1:0] train_en;
-    wire [3:0] capture_data;
 
-    turfio_register_core #(.CAPTURE_DATA_WIDTH(4))
+    turfio_register_core #(.CAPTURE_DATA_WIDTH(32))
         u_registers(.wb_clk_i(wb_clk_i),
                     .wb_rst_i(wb_rst_i),
                     `CONNECT_WBS_IFS(wb_ , wb_ ),
@@ -90,6 +103,9 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                     .rxclk_ok_i(rxclk_ok_i),
                     .aclk_i(aclk_i),
                     .aclk_ok_i(aclk_ok_i),
+                    .aclk_locked_i(aclk_locked_i),
+                    .aclk_reset_o(aclk_reset_o),
+                    .ifclk_alignerr_i(align_err),
                     
                     .ps_en_o(ps_en),
                     .ps_done_i(ps_done),
@@ -117,10 +133,10 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                     .lock_status_i(lock_status),
                     
                     .train_en_o(train_en),
-                    .capture_data_i(capture_data));
+                    .capture_data_i(command_o));
     
-    (* IODELAY_GROUP = "RXCLK", CUSTOM_CC_SRC = "RXCLK" *)
-    IDELAYCTRL u_idelayctrl(.REFCLK(clk300_o),
+    (* IODELAY_GROUP = "RXCLK", CUSTOM_CC_SRC = "CLK300", CUSTOM_CC_DST = "CLK300" *)
+    IDELAYCTRL #(.SIM_DEVICE("ULTRASCALE")) u_idelayctrl(.REFCLK(clk300_o),
                             .RST(idelayctrl_rst),
                             .RDY(idelayctrl_rdy));
     
@@ -174,23 +190,54 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     // except first we transfer into rxclk_x3 and transfer *that* over
     wire [3:0] cin_aclk;
     wire ce_aclk;
+    wire syncclk_toggle;
+    // if this STILL has a problem, we'll probably use
+    // aclk to generate asynchronous resets on the memclk/ifclk
+    // sides or something. aclk is continuously running
+    // even through the reset, so it can tell the others
+    // when to cleanly start up.
+    pueo_clk_phase_v2 u_aclk_track( .aclk(aclk_i),
+                                 .memclk(memclk_i),
+                                 .syncclk(ifclk_i),
+                                 .locked_i(aclk_locked_i),
+                                 .syncclk_toggle_o(syncclk_toggle),
+                                 .memclk_sync_o(memclk_sync_o),
+                                 .aclk_sync_o(aclk_sync_o));
     
     rxclk_aclk_transfer
         u_cin_transfer(.rxclk_i(rxclk),
                        .rxclk_x3_i(rxclk_x3),
                        .rxclk_ce_i(rxclk_ce),                       
                        .data_i(cin_rxclk),
-                       .aclk_i(aclk),                       
+                       .aclk_i(aclk_i),
+                       .aclk_sync_i(aclk_sync_o),                   
                        .data_o(cin_aclk),
                        .data_ce_o(ce_aclk),
+                       .align_err_o(align_err),
+                       .syncclk_toggle_i(syncclk_toggle),
                        .capture_err_o(capture_err));
 
-    // just bullcrap for now
-    wire aclk_capture;
-    (* CUSTOM_CC_SRC = "ACLK" *)
-    reg [3:0] aclk_capture_reg = {4{1'b0}};
-    always @(posedge aclk_i) if (aclk_capture) aclk_capture_reg <= cin_aclk;
+    turfio_cin_parallel_sync 
+        u_parallelizer(.aclk_i(aclk_i),
+                       .cin_i(cin_aclk),
+                       .cin_valid_i(ce_aclk),
+                       .bitslip_i(bitslip),
+                       .bitslip_rst_i(bitslip_rst),
+                       .capture_i(capture_req),
+                       .lock_rst_i(lock_rst),
+                       .lock_i(lock_req),
+                       .locked_o(lock_status),
+                       .cin_biterr_o(cin_err),
+                       .cin_parallel_o(command_o),
+                       .cin_parallel_valid_o(command_valid_o));
 
-    assign capture_data = aclk_capture_reg;
+//                    .cin_err_i(cin_err),
+//                    .capture_req_o(capture_req),
+//                    .bitslip_rst_o(bitslip_rst),
+//                    .bitslip_o(bitslip),
+                    
+//                    .lock_rst_o(lock_rst),
+//                    .lock_req_o(lock_req),
+//                    .lock_status_i(lock_status),
         
 endmodule

@@ -23,3 +23,16 @@ verilog-library-barawn/hdl/clk_div_ce.v
 verilog-library-barawn/hdl/dsp_timed_counter.v
 verilog-library-barawn/hdl/wishbone_arbiter.v
 verilog-library-barawn/hdl/round_robin_arbiter.v
+hdl/turfio/turfio_wrapper.sv
+hdl/turfio/turfio_rxclk_gen.sv
+hdl/turfio/turfio_cin_surf.sv
+hdl/turfio/turfio_register_core.sv
+hdl/turfio/rxclk_aclk_transfer.sv
+verilog-library-barawn/hdl/flag_sync.v
+bd/zynq_bd_revB/zynq_bd_revB.bd
+hdl/turfio/pueo_clk_phase.v
+hdl/turfio/surf_sync_gen.sv
+hdl/turfio/pueo_clk_phase_v2.v
+hdl/turfio/turfio_cin_parallel_sync.sv
+hdl/turfio/bit_align.sv
+verilog-library-barawn/hdl/srlvec.v

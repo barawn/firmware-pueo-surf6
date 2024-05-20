@@ -37,7 +37,9 @@
 // bit 10: lock reset
 // bit 11: lock req
 // bit 12: lock status
-// bit 15-13 - unused
+// bit 13: reset aclk plls
+// bit 14: aclk plls are locked
+// bit 15: ifclk alignment error
 // bit 24-16: target PS value
 // bit 30-25 - unused
 // bit 31: PS is incomplete
@@ -47,7 +49,9 @@
 // target_ps_value, ps_incomplete
 
 // god this is such a giant mess
-module turfio_register_core #(parameter CLKTYPE="PSCLK",
+module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
+                              parameter ACLKTYPE="SYSREFCLK",
+                              parameter RXCLKTYPE="RXCLK",
                               parameter CAPTURE_DATA_WIDTH = 4
 )(
         input wb_clk_i,
@@ -58,6 +62,10 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
         input rxclk_ok_i,
         input aclk_i,
         input aclk_ok_i,
+        
+        input aclk_locked_i,
+        output aclk_reset_o,
+        input ifclk_alignerr_i,
         
         // mmcm & phase shift interface
         output ps_en_o,
@@ -96,6 +104,8 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
         input [CAPTURE_DATA_WIDTH-1:0] capture_data_i
     );
 
+    localparam NUM_ADR_BITS = 11;
+
     // our phase shift needs to be enough to track the 125 MHz
     // delays: we need to make sure that the delays we use on all
     // SURFs is the same.
@@ -107,34 +117,41 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
     localparam RXCLK_FINE_PS_BITS = $clog2(RXCLK_FINE_PS_MAX);
     
     // spaces are split up
-    localparam [10:0] CLOCK_DOMAIN_MASK     = 11'h0C0;
-    localparam [10:0] WB_CLK_DOMAIN         = 11'h000;
-    localparam [10:0] ACLK_DOMAIN           = 11'h040;
-    localparam [10:0] RXCLK_DOMAIN          = 11'h080;
+    localparam [NUM_ADR_BITS-1:0] CLOCK_DOMAIN_MASK     = 11'h0C0;
+    localparam [NUM_ADR_BITS-1:0] WB_CLK_DOMAIN         = 11'h000;
+    localparam [NUM_ADR_BITS-1:0] ACLK_DOMAIN           = 11'h040;
+    localparam [NUM_ADR_BITS-1:0] RXCLK_DOMAIN          = 11'h080;
     
-    localparam [10:0] REGISTER_MASK         = 11'h03F;
+    localparam [NUM_ADR_BITS-1:0] REGISTER_MASK         = 11'h03F;
     
-    localparam [10:0] CONTROL_REG           = 11'h000;
-    localparam [10:0] ACLK_BIT_ERR_REG      = 11'h040;
-
-    localparam [10:0] PRIMARY_IDELAY_REG    = 11'h080;
-    localparam [10:0] PRIMARY_ODELAY_REG    = 11'h084;
-    localparam [10:0] MONITOR_IDELAY_REG    = 11'h088;
-    localparam [10:0] MONITOR_ODELAY_REG    = 11'h08C;
+    localparam [NUM_ADR_BITS-1:0] CONTROL_REG           = 11'h000;
+    localparam [NUM_ADR_BITS-1:0] ACLK_BIT_ERR_REG      = 11'h040;
+    localparam [NUM_ADR_BITS-1:0] ACLK_CAPTURE_REG      = 11'h044;
+    localparam [NUM_ADR_BITS-1:0] ACLK_CIN_ERR_REG      = 11'h048;
+    
+    localparam [NUM_ADR_BITS-1:0] PRIMARY_IDELAY_REG    = 11'h080;
+    localparam [NUM_ADR_BITS-1:0] PRIMARY_ODELAY_REG    = 11'h084;
+    localparam [NUM_ADR_BITS-1:0] MONITOR_IDELAY_REG    = 11'h088;
+    localparam [NUM_ADR_BITS-1:0] MONITOR_ODELAY_REG    = 11'h08C;
 
     `define DOMAIN_MATCH( domain , adrval )  \
-        ( (adrval & CLOCK_DOMAIN_MASK ) == domain )
+        ( (adrval & CLOCK_DOMAIN_MASK ) == (domain & CLOCK_DOMAIN_MASK))
 
     `define REGVAL_MATCH( regval , adrval)  \
-        ( (adrval & REGISTER_MASK ) == regval )        
+        ( (adrval & REGISTER_MASK ) == (regval & REGISTER_MASK))        
 
     `define FULL_MATCH( domain, regval, adrval ) \
         ( `DOMAIN_MATCH( domain , adrval ) && `REGVAL_MATCH( regval , adrval ) )
 
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg [31:0] dat_in_static = {32{1'b0}};
+    (* CUSTOM_CC_DST = WBCLKTYPE *)
     reg [31:0] dat_reg = {32{1'b0}};
-    reg [5:0] adr_in_static = {6{1'b0}};
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
+    reg [NUM_ADR_BITS-1:0] adr_in_static = {NUM_ADR_BITS{1'b0}};
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg [3:0] sel_in_static = {4{1'b0}};
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg we_in_static = 0;
     
     // these are checked in idle
@@ -176,6 +193,9 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
     /////////////////////
     // BIT ERROR COUNTING
     /////////////////////
+    // NOTE NOTE NOTE
+    // I MIGHT JUST REPLACE THIS AND MUX THE ERROR INPUTS
+    // IT'S KINDA STUPID TO DUPLICATE IT
     wire [24:0] aclk_bit_error_count;
     wire        aclk_bit_error_count_valid;
     reg         aclk_bit_error_count_valid_rereg = 0;
@@ -191,11 +211,13 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
                                    .out_clkB(aclk_bit_error_count_ack),
                                    .clkA(wb_clk_i),
                                    .clkB(aclk_i));
+    // this is a cross-clock target
+    (* CUSTOM_CC_DST = WBCLKTYPE *)                                   
     reg [24:0]  aclk_bit_error_count_wbclk = {25{1'b0}};
     always @(posedge wb_clk_i)
         if (aclk_bit_error_count_valid_wbclk)
             aclk_bit_error_count_wbclk <= aclk_bit_error_count;                                       
-    dsp_timed_counter #(.MODE("ACKNOWLEDGE"))
+    dsp_timed_counter #(.MODE("ACKNOWLEDGE"),.CLKTYPE_SRC(ACLKTYPE),.CLKTYPE_DST(ACLKTYPE))
         u_aclk_biterr(.clk(aclk_i),
                        .rst(aclk_bit_error_count_ack),
                        .count_in(capture_err_i),
@@ -205,26 +227,67 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
                                        we_in_static ),
                        .count_out(aclk_bit_error_count),
                        .count_out_valid(aclk_bit_error_count_valid));
+    /////////////////////
+    // CIN ERROR COUNTING
+    /////////////////////
+    wire [24:0] aclk_cin_error_count;
+    wire        aclk_cin_error_count_valid;
+    reg         aclk_cin_error_count_valid_rereg = 0;
+    always @(posedge aclk_i) aclk_cin_error_count_valid_rereg <= aclk_cin_error_count_valid;
+    wire        aclk_cin_error_count_flag = aclk_cin_error_count_valid && !aclk_cin_error_count_valid_rereg;
+    wire        aclk_cin_error_count_valid_wbclk;
+    flag_sync   u_aclk_cinerr_valid_sync(.in_clkA(aclk_cin_error_count_flag),
+                                          .out_clkB(aclk_cin_error_count_valid_wbclk),
+                                          .clkA(aclk_i),
+                                          .clkB(wb_clk_i));
+    wire        aclk_cin_error_count_ack;
+    flag_sync   u_aclk_cinerr_ack(.in_clkA(aclk_cin_error_count_valid_wbclk),
+                                   .out_clkB(aclk_cin_error_count_ack),
+                                   .clkA(wb_clk_i),
+                                   .clkB(aclk_i));
+    // this is a cross-clock target
+    (* CUSTOM_CC_DST = WBCLKTYPE *)                                   
+    reg [24:0]  aclk_cin_error_count_wbclk = {25{1'b0}};
+    always @(posedge wb_clk_i)
+        if (aclk_cin_error_count_valid_wbclk)
+            aclk_cin_error_count_wbclk <= aclk_cin_error_count;                                       
+    dsp_timed_counter #(.MODE("ACKNOWLEDGE"),.CLKTYPE_SRC(ACLKTYPE),.CLKTYPE_DST(ACLKTYPE))
+        u_aclk_cinerr(.clk(aclk_i),
+                       .rst(aclk_cin_error_count_ack),
+                       .count_in(cin_err_i),
+                       .interval_in(dat_in_static[23:0]),
+                       .interval_load( aclk_waiting_flag_aclk &&
+                                       `REGVAL_MATCH( ACLK_CIN_ERR_REG , adr_in_static ) &&
+                                       we_in_static ),
+                       .count_out(aclk_cin_error_count),
+                       .count_out_valid(aclk_cin_error_count_valid));
 
     /////////////////////
     // CONTROLS
     /////////////////////
 
-    (* CUSTOM_CC_SRC = CLKTYPE *)
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg cin_rst = 0;
-    (* CUSTOM_CC_SRC = CLKTYPE *)
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg dis_vtc = 0;
-    (* CUSTOM_CC_SRC = CLKTYPE *)
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg mmcm_rst = 0;
-    (* CUSTOM_CC_DST = CLKTYPE *)
+    (* CUSTOM_CC_DST = WBCLKTYPE *)
     reg [1:0] mmcm_locked = {2{1'b0}};
+
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
+    reg pll_reset = 0;
+    (* CUSTOM_CC_DST = WBCLKTYPE *)
+    reg [1:0] pll_locked = {2{1'b0}};
+    (* CUSTOM_CC_DST = WBCLKTYPE *)
+    reg [1:0] pll_align_err = {2{1'b0}};    
     
-    (* CUSTOM_CC_SRC = CLKTYPE *)
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg idelayctrl_rst = 0;
-    (* CUSTOM_CC_DST = CLKTYPE *)
+    (* CUSTOM_CC_DST = WBCLKTYPE *)
     reg [1:0] idelayctrl_rdy = {2{1'b0}};
     
-    (* CUSTOM_CC_SRC = CLKTYPE *)
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg [1:0] train_enable = {2{1'b0}};
 
     reg bitslip_rst = 0;
@@ -232,7 +295,7 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
     
     reg lock_rst = 0;
     reg lock_req = 0;
-    (* ASYNC_REG = "TRUE", CUSTOM_CC_DST = CLKTYPE *)
+    (* ASYNC_REG = "TRUE", CUSTOM_CC_DST = WBCLKTYPE *)
     reg [1:0] lock_status = 0;
         
     
@@ -250,7 +313,9 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
           {(15-RXCLK_FINE_PS_BITS){1'b0}},
           target_ps_value,
 
-          {3{1'b0}},            // 15-13
+          pll_align_err[1],     // 15
+          pll_locked[1],        // 14
+          pll_reset,            // 13
           lock_status[1],       // 12
           lock_req,             // 11
           lock_rst,             // 10
@@ -304,6 +369,7 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
                 bitslip <= dat_in_static[9];
                 lock_rst <= dat_in_static[10];
                 lock_req <= dat_in_static[11];
+                pll_reset <= dat_in_static[13];
             end
             if (sel_in_static[3] && sel_in_static[2]) begin
                 target_ps_value <= dat_in_static[16 +: RXCLK_FINE_PS_BITS];
@@ -319,6 +385,8 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
         lock_status <= { lock_status[0], lock_status_i };
         idelayctrl_rdy <= { idelayctrl_rdy[0], idelayctrl_rdy_i };
         mmcm_locked <= { mmcm_locked[0], mmcm_locked_i };
+        pll_locked <= { pll_locked[0], aclk_locked_i };
+        pll_align_err <= { pll_align_err[0], ifclk_alignerr_i };
         
         // static capture
         if (wb_cyc_i && wb_stb_i) begin
@@ -361,11 +429,18 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
             if (aclk_ack_flag_wbclk) begin
                 if (`REGVAL_MATCH( ACLK_BIT_ERR_REG , adr_in_static )) dat_reg <= aclk_bit_error_count_wbclk;
                 // aclk side capture here
+                else if (`REGVAL_MATCH( ACLK_CAPTURE_REG, adr_in_static)) dat_reg <= capture_data_i;
+                else if (`REGVAL_MATCH( ACLK_CIN_ERR_REG, adr_in_static)) dat_reg <= aclk_cin_error_count_wbclk;
             end else if (!aclk_ok_i) begin
                 dat_reg <= {32{1'b1}};
-            end
+            end            
          end else begin
-            dat_reg <= control_register;
+            // this SHOULDN'T MATTER but WHATEVER
+            if (state == IDLE) begin
+                // can qualify more but who cares
+                if (wb_cyc_i && wb_stb_i)
+                    dat_reg <= control_register;
+            end                    
          end         
     end
 
@@ -386,6 +461,10 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
     assign mmcm_rst_o = mmcm_rst;
     assign idelayctrl_rst_o = idelayctrl_rst;
 
+    assign aclk_reset_o = pll_reset;
+
+    assign capture_req_o = aclk_waiting_flag_aclk && `REGVAL_MATCH( ACLK_CAPTURE_REG , adr_in_static );
+
     // delays are spaced apart and apply when adr_static[7] is set
     assign delay_sel_o = adr_in_static[3:2];
     assign delay_load_o = (adr_in_static[7] && !adr_in_static[6] && we_in_static && sel_in_static[0] && sel_in_static[1])
@@ -399,5 +478,7 @@ module turfio_register_core #(parameter CLKTYPE="PSCLK",
     assign wb_ack_o = (state == ACK);
     assign wb_err_o = 1'b0;
     assign wb_rty_o = 1'b0;
+                                
+    assign ps_en_o = fine_ps_enable;
                                 
 endmodule

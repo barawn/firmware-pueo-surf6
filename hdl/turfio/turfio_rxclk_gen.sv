@@ -50,6 +50,8 @@ module turfio_rxclk_gen #(parameter INV_RXCLK = 1'b0)(
     localparam RXCLKx3_DIVIDE = 4;
     localparam CLK300_DIVIDE = 5;
 
+    // Xilinx bitches at me if CLKOUT1 drives the IO cells (rxclk_x2) for some reason.
+    // So clkout0 is rxclk_x2 and clkout1 is rxclk
     MMCME4_ADV #( .CLKFBOUT_MULT_F(VCO_MULTIPLIER),
                   .CLKFBOUT_PHASE(0.000),
                   .CLKIN1_PERIOD(8.000),
@@ -58,16 +60,16 @@ module turfio_rxclk_gen #(parameter INV_RXCLK = 1'b0)(
                   .CLKOUT3_USE_FINE_PS("FALSE"),
                   .CLKOUT2_DIVIDE(RXCLKx3_DIVIDE),
                   .CLKOUT2_USE_FINE_PS("TRUE"),
-                  .CLKOUT1_DIVIDE(RXCLKx2_DIVIDE),
+                  .CLKOUT1_DIVIDE(RXCLK_DIVIDE),
                   .CLKOUT1_USE_FINE_PS("TRUE"),
-                  .CLKOUT0_DIVIDE_F(RXCLK_DIVIDE),
+                  .CLKOUT0_DIVIDE_F(RXCLKx2_DIVIDE),
                   .CLKOUT0_USE_FINE_PS("TRUE"))
         u_rxclk_mmcm(.CLKIN1(rxclk_in),
                      .CLKFBIN(rxclk_fb_bufg),
                      .PWRDWN(1'b0),
                      .CLKFBOUT(rxclk_fb_to_bufg),
-                     .CLKOUT0(rxclk_to_bufg),
-                     .CLKOUT1(rxclk_x2_to_bufg),
+                     .CLKOUT0(rxclk_x2_to_bufg),
+                     .CLKOUT1(rxclk_to_bufg),
                      .CLKOUT2(rxclk_x3_to_bufg),
                      .CLKOUT3(clk300_to_bufg),
                      .RST(rst_i),
