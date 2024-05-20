@@ -14,7 +14,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 4'd2,
+                    parameter [7:0] VER_REV = 4'd6,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     parameter USE_GTPCLK1 = "FALSE")
@@ -147,15 +147,18 @@ module pueo_surf6 #(parameter IDENT="SURF",
 
     BUFG u_aclk_bufg(.I(aclk_in),.O(aclk));
             
-    // sigh handle this with a startup reset properly
-    wire aclk_reset = 1'b0;
+    // let's just try "reset until the goddamn thing lines up"
+    wire aclk_reset;
     // Interface clock. This is 125 MHz and 250 MHz. ifclk is also used to phase up aclk/memclk
     wire ifclk;
     wire ifclk_x2;
     // 500 MHz for URAM.
     (* KEEP = "TRUE" *)
     wire memclk;
-    
+    (* KEEP = "TRUE" *)
+    wire memclk_sync;
+    (* KEEP = "TRUE" *)
+    wire aclk_sync;
 //    wire aclk_locked;
     
 //    sysclk_wiz u_aclk(.clk_in1(aclk),.reset(aclk_reset),
@@ -264,6 +267,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
                  
                  .aclk_i(aclk),
                  .aclk_ok_i(aclk_ok),
+                 .aclk_locked_i(aclk_locked),
+                 .aclk_reset_o(aclk_reset),
+                 .aclk_sync_o(aclk_sync),
+                 
+                 .memclk_i(memclk),
+                 .memclk_sync_o(memclk_sync),
+                 
                  .ifclk_i(ifclk),
                  .ifclk_x2_i(ifclk_x2),
                  
