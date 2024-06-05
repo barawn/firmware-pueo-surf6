@@ -457,7 +457,7 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     // assign out the constants
     assign cin_rst_o = cin_rst;
     assign en_vtc_o = !dis_vtc;                             
-    assign train_enable_o = train_enable;
+    assign train_en_o = train_enable;
     assign mmcm_rst_o = mmcm_rst;
     assign idelayctrl_rst_o = idelayctrl_rst;
 
