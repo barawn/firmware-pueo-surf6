@@ -163,6 +163,24 @@ set_cc_paths $clk300 $psclk $clktypelist
 set_cc_paths $psclk $rxclk $clktypelist
 set_cc_paths $rxclk $psclk $clktypelist
 
+set_cc_paths $psclk $ifclk $clktypelist
+
+
+# CLOCK ADJUSTMENTS
+# Xilinx doesn't have any way to properly adjust launch/capture clocks
+# arbitrarily (set_multicycle_path does not allow _separate_ launch/capture
+# clock adjustments on setup/hold, you can only do one or the other)
+# So, eff you, Xilinx, just specify everyone myself.
+set sync_src [get_cells -hier -filter { NAME =~ "u_syncgen/next_do_sync_reg" }]
+set sync_tgt [get_cells -hier -filter { NAME =~ "u_syncgen/ifclk_sync_reg"}]
+lappend sync_tgt [get_cells -hier -filter { NAME =~ "u_syncgen/memclk_sync_reg"}]
+
+# Both IFCLK and MEMCLK fundamentally have the same setup/hold
+# because they are both sourced and captured by the same edges
+# so setup is 2.667 (launch to capture) and hold is -5.333 (launch to prior capture)
+set_max_delay -from $sync_src -to $sync_tgt 2.667
+set_min_delay -from $sync_src -to $sync_tgt -5.333 
+
 # NOTE NOTE
 # THIS MEANS DEBUGGING ONLY WORKS IF PS IS RUNNING
 # guard against dumbassery
