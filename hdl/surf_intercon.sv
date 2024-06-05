@@ -14,7 +14,7 @@ module surf_intercon(
         `HOST_NAMED_PORTS_WB_IF( notch_ , 12, 32),
         `HOST_NAMED_PORTS_WB_IF( agc_ , 12, 32),
         `HOST_NAMED_PORTS_WB_IF( beam_ , 12, 32),
-        `HOST_NAMED_PORTS_WB_IF( rfdc_ , 17, 32)    
+        `HOST_NAMED_PORTS_WB_IF( rfdc_ , 18, 32)    
     );    
 
     parameter DEBUG = "TRUE";
