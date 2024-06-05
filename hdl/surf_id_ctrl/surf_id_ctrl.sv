@@ -6,6 +6,9 @@ module surf_id_ctrl(
         input wb_rst_i,
         `TARGET_NAMED_PORTS_WB_IF( wb_ , 11, 32),
         
+        output [7:0] gpo_o,
+        output [4:0] sync_offset_o,
+        
         output aclk_ok_o,
         output rxclk_ok_o,
         output gtpclk_ok_o,
@@ -27,9 +30,13 @@ module surf_id_ctrl(
     reg dna_shift = 0;
     reg dna_read = 0;
     
-    wire [31:0] ctrlstat_reg;
-    assign ctrlstat_reg = {32{1'b0}};
+    reg [7:0] ctrlstat_gpo = {8{1'b0}};
     
+    (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
+    reg [4:0] sync_offset = {5{1'b0}};
+    
+    wire [31:0] ctrlstat_reg = { {16{1'b0}}, {3{1'b0}}, sync_offset, ctrlstat_gpo };
+        
     wire sel_internal = (wb_adr_i[6 +: (WB_ADR_BITS-6)] == 0);
     wire [31:0] wishbone_registers[15:0];
     
@@ -93,6 +100,11 @@ module surf_id_ctrl(
         else dna_shift <= 0;
         if (sel_dna && wb_we_i && wb_ack_o && wb_sel_i[3]) dna_read <= wb_dat_i[31];
         else dna_read <= 0;        
+
+        if (sel_ctrlstat && wb_we_i && wb_ack_o) begin
+            if (wb_sel_i[0]) ctrlstat_gpo <= wb_dat_i[7:0];
+            if (wb_sel_i[1]) sync_offset <= wb_dat_i[8 +: 5];
+        end
     end    
     DNA_PORTE2 u_dina(.DIN(1'b0),.READ(dna_read),.SHIFT(dna_shift),.CLK(wb_clk_i),.DOUT(dna_data));
 
@@ -117,6 +129,9 @@ module surf_id_ctrl(
     assign aclk_ok_o = clk_running[0];
     assign gtpclk_ok_o = clk_running[1];
     assign rxclk_ok_o = clk_running[2];
+    
+    assign gpo_o = ctrlstat_gpo;
+    assign sync_offset_o = sync_offset;
     
     assign wb_ack_o = (wb_adr_i[6]) ? ack_clockmon : ack_internal;
     assign wb_err_o = 1'b0;
