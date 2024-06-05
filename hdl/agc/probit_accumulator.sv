@@ -1,7 +1,8 @@
 `timescale 1ns / 1ps
 // takes in 8 channels worth of gt/lts and accumulates them
 // NBITS needs to be log2(nsamples)+1 - nsamples, NOT nclocks
-module probit_accumulator #(parameter NBITS=21)(
+module probit_accumulator #(parameter NBITS=21,
+                            parameter CLKTYPE="NONE")(
         input clk_i,
         input ce_i,
         input rst_i,
@@ -125,10 +126,13 @@ module probit_accumulator #(parameter NBITS=21)(
                        .O(lt_carry_o),
                        .CO(lt_carry_co),
                        .CYINIT(1'b0));
-
+    (* CUSTOM_CC_SRC = CLKTYPE *)
     reg [3:0] gt_bot_register = {4{1'b0}};
+    (* CUSTOM_CC_SRC = CLKTYPE *)
     reg [3:0] lt_bot_register = {4{1'b0}};                       
+    (* CUSTOM_CC_SRC = CLKTYPE *)
     reg [NBITS-4-1:0] gt_top_register = {(NBITS-4){1'b0}};
+    (* CUSTOM_CC_SRC = CLKTYPE *)
     reg [NBITS-4-1:0] lt_top_register = {(NBITS-4){1'b0}};
     always @(posedge clk_i) begin
         if (rst_i) begin

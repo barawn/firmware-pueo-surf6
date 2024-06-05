@@ -10,7 +10,8 @@ module agc_core #(parameter NBITS=12,
                   parameter NSAMP=8,
                   parameter OBITS=5,
                   parameter SQ_BITS=24,
-                  parameter PR_BITS=21)(
+                  parameter PR_BITS=21,
+                  parameter CLKTYPE="NONE")(
         input clk_i,
         // data inputs
         input [NBITS*NSAMP-1:0] rf_dat_i,
@@ -52,7 +53,8 @@ module agc_core #(parameter NBITS=12,
     localparam [23:0] SQ_OFFSET = 16384;
     
     // probit accumulator
-    probit_accumulator #(.NBITS(PR_BITS))
+    probit_accumulator #(.NBITS(PR_BITS),
+                         .CLKTYPE(CLKTYPE))
         u_pr(.clk_i(clk_i),
              .ce_i(agc_ce_i),
              .rst_i(agc_tick_i),
@@ -78,7 +80,8 @@ module agc_core #(parameter NBITS=12,
                        .out_o(abs_val_mux));                     
     // square accumulator             
     square_5bit_accumulator #(.NBITS(SQ_BITS),
-                              .RESET_VALUE(SQ_OFFSET))
+                              .RESET_VALUE(SQ_OFFSET),
+                              .CLKTYPE(CLKTYPE))
        u_sq(.clk_i(clk_i),
             .in_i(abs_val_mux),
             .ce_i(agc_ce_i),
@@ -96,7 +99,7 @@ module agc_core #(parameter NBITS=12,
                            .ce_offset_i(agc_offset_ce_i),
                            .apply_i(agc_apply_i),
                            .out_o(rf_dat_o[OBITS*i +: OBITS]),
-                           .abs_o(abs_vals[(OBITS-1)*i +: OBITS]),
+                           .abs_o(abs_vals[(OBITS-1)*i +: (OBITS-1)]),
                            .gt_o(gt_thresh[i]),
                            .lt_o(lt_thresh[i]));
         end
