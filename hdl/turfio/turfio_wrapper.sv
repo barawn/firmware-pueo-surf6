@@ -26,17 +26,26 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         input ifclk_i,
         input ifclk_x2_i,
         input memclk_i,
-        
-        output aclk_sync_o,
-        output memclk_sync_o,        
+
+        // these are phase indicators        
+        output aclk_phase_o,
+        output memclk_phase_o,        
+        // this is a synchronize response to align stuff
+        input  ifclk_sync_i,
 
         output rxclk_o,
         input rxclk_ok_i,
 
+        // these are the parallelized CIN/COUT paths
         output [31:0] command_o,
         output command_valid_o,
         input [31:0] response_i,
         input response_valid_i,
+
+        // this is the DOUT path, in IFCLK domain
+        input [7:0] s_dout_tdata,
+        input       s_dout_tvalid,
+        output      s_dout_tready,
 
         input RXCLK_P,
         input RXCLK_N,
@@ -62,7 +71,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     // what-freaking-ever
     obufds_autoinv #(.INV(INV_TXCLK)) u_txclk(.I(1'b0),.O_P(TXCLK_P),.O_N(TXCLK_N));
     obufds_autoinv #(.INV(INV_COUT)) u_cout(.I(1'b0),.O_P(COUT_P),.O_N(COUT_N));
-    obufds_autoinv #(.INV(INV_DOUT)) u_dout(.I(ifclk_out),.O_P(DOUT_P),.O_N(DOUT_N));    
+//    obufds_autoinv #(.INV(INV_DOUT)) u_dout(.I(ifclk_out),.O_P(DOUT_P),.O_N(DOUT_N));    
 
 
     // Register core outputs
@@ -201,8 +210,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                                  .syncclk(ifclk_i),
                                  .locked_i(aclk_locked_i),
                                  .syncclk_toggle_o(syncclk_toggle),
-                                 .memclk_sync_o(memclk_sync_o),
-                                 .aclk_sync_o(aclk_sync_o));
+                                 .memclk_sync_o(memclk_phase_o),
+                                 .aclk_sync_o(aclk_phase_o));
     
     rxclk_aclk_transfer
         u_cin_transfer(.rxclk_i(rxclk),
@@ -210,7 +219,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                        .rxclk_ce_i(rxclk_ce),                       
                        .data_i(cin_rxclk),
                        .aclk_i(aclk_i),
-                       .aclk_sync_i(aclk_sync_o),                   
+                       .aclk_sync_i(aclk_phase_o),                   
                        .data_o(cin_aclk),
                        .data_ce_o(ce_aclk),
                        .align_err_o(align_err),
@@ -231,13 +240,13 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                        .cin_parallel_o(command_o),
                        .cin_parallel_valid_o(command_valid_o));
 
-//                    .cin_err_i(cin_err),
-//                    .capture_req_o(capture_req),
-//                    .bitslip_rst_o(bitslip_rst),
-//                    .bitslip_o(bitslip),
-                    
-//                    .lock_rst_o(lock_rst),
-//                    .lock_req_o(lock_req),
-//                    .lock_status_i(lock_status),
+    turfio_dout #(.INV_DOUT(INV_DOUT))
+        u_dout(.ifclk_i(ifclk_i),
+               .ifclk_x2_i(ifclk_x2_i),
+               .ifclk_sync_i(ifclk_sync_i),
+               .train_i(train_en[1]),
+               `CONNECT_AXI4S_MIN_IF( s_axis_ , s_dout_ ),
+               .DOUT_P(DOUT_P),
+               .DOUT_N(DOUT_N));
         
 endmodule
