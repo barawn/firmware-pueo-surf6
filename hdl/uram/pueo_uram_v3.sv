@@ -274,7 +274,7 @@ module pueo_uram_v3 #(
             // by 4 writes, they can just *pass the data up* and
             // it'll naturally delay.
             localparam FIRST_CASCADE_ORDER_B = (i == 0) ? "FIRST" : "MIDDLE";
-            localparam LAST_CASCADE_ORDER_B = (i == NCHAN-1) ? "MIDDLE" : "LAST";
+            localparam LAST_CASCADE_ORDER_B = (i == NCHAN-1) ? "LAST" : "MIDDLE";
 
             localparam REG_CAS_B_START = "TRUE";
             localparam REG_CAS_B_MID0 = "TRUE";

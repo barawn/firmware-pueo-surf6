@@ -114,9 +114,24 @@ module uram_sync_transfer #(
     // phase 0 (capture phase 3): reference (unchanged)
     // phase 1 (capture phase 0): swap bits [23:0] with bits [47:24]
     // phase 2 (capture phase 1): swap bits [23:0] with bits [71:48]
-    // phase 3 (capture phase 2): bits [23:0] = bits [47:24]
+    // phase 3 (capture phase 2): source bits [47:24] => dest bits [71:48]
+    //                            source bits [71:48] => dest bits [23:0]
+    //                            source bits [23:0] => dest bits [47:24]
+    // so viewing from destination we want
+    //                    { source[47:24], source[23:0], source[71:48] }
+    // bits [23:0] = bits [47:24]
     //                            bits [47:24] = bits [71:48]
     //                            bits [71:48] = bits [23:0]
+    // if clk0 has 28,29,2A, 2B,2C,2D
+    //    clk1 has 2E,2F,30, 31,32,33
+    //    clk2 has 34,35,36, 37,38,39
+    //    clk3 has 3A,3B,3C, 3D,3E,3F
+    // we want this to be written
+    // 28 29 2A 2B 2C 2D 2E 2F
+    // 30 31 32 33 34 35 36 37
+    // 38 39 3A 3B 3C 3D 3E 3F
+    // so the same bytes that write 2C/2D and 34/35 want 3C/3D
+    // so clk3 wants bits[47:24] => [71:48]
     always @(posedge memclk_i) begin
         case (write_phase)
             0: write_data <= (SCRAMBLE_OPT == "TRUE") ? 
@@ -126,7 +141,7 @@ module uram_sync_transfer #(
                 { write_data_in[1][23:0], write_data_in[1][47:24], write_data_in[1][71:48]} :
                 write_data_in[1];
             2: write_data <= (SCRAMBLE_OPT == "TRUE") ? 
-                { write_data_in[2][23:0], write_data_in[2][71:48], write_data_in[2][47:24]} :
+                { write_data_in[2][47:24], write_data_in[2][23:0], write_data_in[2][71:48]} :
                 write_data_in[2];
             3: write_data <= write_data_in[3];
         endcase

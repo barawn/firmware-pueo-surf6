@@ -38,29 +38,34 @@ module uram_event_timer(
     // The *first* delay doesn't matter - it gets aligned to the capture
     // by delaying running properly. After that we want 6/5/6/5/etc.
     // clk  running_i   pulse_in    phase_toggle    A   SR     delay_done  count    action          lo_addr up_addr_in  up_addr
-    // 0    0           0           0               4   00000  0           X                        0       0           0
-    // 1    1           0           0               4   00000  0           X                        0       0           0
-    // 2    1           1           0               4   00000  0           0        increment       0       0           0
-    // 3    1           0           1               3   00001  0           1        no increment    1       0           0
-    // 4    1           0           1               3   00010  0           2        increment       1       4           0
-    // 5    1           0           1               3   00100  0           3        increment       2       4           0
+    // 0    0           0           0               3   00000  0           X                        0       0           0
+    // 1    1           0           0               3   00000  0           X                        0       0           0
+
+    // 2    1           1           0               3   00000  0           0        increment       0       0           0
+    // 3    1           0           0               3   00001  0           1        no increment    1       0           0   0
+    // 4    1           0           0               3   00010  0           2        increment       1       4           0   1
+    // 5    1           0           0               3   00100  0           3        increment       2       4           0   2
     
-    // 6    1           0           1               3   01000  1           4        increment       3       4           0
-    // 7    1           1           1               3   10000  0           0        no increment    0       4           0
-    // 8    1           0           0               4   00001  0           1        increment       0       8           4
-    // 9    1           0           0               4   00010  0           2        increment       1       8           4
+    // 6    1           0           0               3   01000  1           4        increment       3       4           0   3
+    // 7    1           1           0               3   10000  0           0        no increment    0       4           0   0
+    // 8    1           0           1               4   00001  0           1        increment       0       8           4   1
+    // 9    1           0           1               4   00010  0           2        increment       1       8           4   2
     
-    // 10   1           0           0               4   00100  0           3        increment       2       8           4
-    // 11   1           0           0               4   01000  0           4        no increment    3       8           4
-    // 12   1           0           0               4   10000  1           5        increment       3       8           4
-    // 13   1           1           0               4   00000  0           0        increment       0       12          8
+    // 10   1           0           1               4   00100  0           3        increment       2       8           4   3
+    // 11   1           0           1               4   01000  0           4        no increment    3       8           4   0
+    // 12   1           0           1               4   10000  1           5        increment       3       8           4   1
+    // 13   1           1           1               4   00000  0           0        increment       0       12          8   2
     
-    // 14   1           0           1               3   00001  0           1        increment       1       12          8
-    // 15   1           0           1               3   00010  0           2        no increment    2       12          8
-    // 16   1           0           1               3   00100  0           3        increment       2       12          8
-    // 17   1           0           1               3   01000  1           4        increment       3       12          8
+    // 14   1           0           0               3   00001  0           1        increment       1       12          8   3
+    // 15   1           0           0               3   00010  0           2        no increment    2       12          8   0
+    // 16   1           0           0               3   00100  0           3        increment       2       12          8   1
+    // 17   1           0           0               3   01000  1           4        increment       3       12          8   2
     //
-    // 18   1           1           1               3   10000  0           0        increment       0       16          12                 
+    // 18   1           1           0               3   10000  0           0        increment       0       16          12  3         
+    //    
+    // So this logic works if we have a counter-encoded phase.
+    // With a one-hot encoded phase, we can ALSO do it with one select: this time we *avoid* toggling
+    // the only time it happens (phase[3]).
     SRL16E u_delay(.D(pulse_in),
                    .CE(1'b1),
                    .CLK(memclk_i),
@@ -75,7 +80,7 @@ module uram_event_timer(
     // running which is only captured at a certain memclk phase
     // and which is launched earlier. We'll see.
     // Probably will end up doing this, because the addresses
-    // need to be delayed as well.
+    // need to be delayed as well.    
     always @(posedge memclk_i) begin
         if (!running_i) phase_toggle <= 0;
         else if (pulse_in && memclk_phase_i) phase_toggle <= ~phase_toggle;
