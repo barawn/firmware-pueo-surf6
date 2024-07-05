@@ -8,6 +8,7 @@
 module uram_read_counter #(parameter COUNT_MAX = 171,
                            parameter ADDR_BITS = 14)(
         input clk_i,
+        input rst_i,
         input [ADDR_BITS-1:0] start_addr_i,
         input run_i,
         output addr_valid_o,
@@ -51,8 +52,11 @@ module uram_read_counter #(parameter COUNT_MAX = 171,
     reg running = 0;
     reg valid = 0;
     wire done;
+    // Only running needs to take in rst_i: valid will go
+    // low as soon as running goes low.
+    // Running will also reset the DSPs.
     always @(posedge clk_i) begin
-        if (done) running <= 0;
+        if (done || rst_i) running <= 0;
         else if (run_i) running <= 1;
         
         if (done) valid <= 1'b0;

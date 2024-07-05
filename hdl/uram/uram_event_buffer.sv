@@ -23,6 +23,17 @@
 // so that's an additional 64 total bytes.
 // Smallest FIFO we have is a single FIFO18
 // which is 8x2048 so this isn't a problem.
+//
+// NOTE: rst_i is in memclk domain
+//       ifclk_rst_i is in ifclk domain
+//       Resets here need to be applied
+//       -> assert ifclk reset
+//       -> assert memclk reset
+//       -> release memclk reset
+//       -> release ifclk reset
+//       and the resets obviously need to be held for a minimum # of clocks (16 is good enough for all of ours)
+// We need an overall reset controller which sequences stuff. Our overall goal is to
+// keep the reset inputs at each module as simple as possible and allow them to be pipelined.
 module uram_event_buffer #(parameter NCHAN = 8,
                            parameter NBIT_IN = 72,
                            parameter BEGIN_PHASE = 1,
@@ -133,6 +144,12 @@ module uram_event_buffer #(parameter NCHAN = 8,
     localparam [3:0] SRL_TERMINATE_DELAY = TERMINATE_DELAY-1;
     reg terminate_seen = 0;
     wire do_terminate;
+    // we use terminate_seen to act as a portion of our
+    // reset - but that means it needs to be a flag
+    reg memclk_reset = 0;
+    reg memclk_reset_rereg = 0;
+    reg memclk_reset_flag = 0;
+    
     SRL16E u_terminate_delay(.D(terminate_seen),
                              .CE(1'b1),
                              .CLK(memclk_i),
@@ -154,11 +171,15 @@ module uram_event_buffer #(parameter NCHAN = 8,
                              .Q(do_complete));
                                  
     always @(posedge memclk_i) begin
+        memclk_reset <= rst_i;
+        memclk_reset_rereg <= memclk_reset;
+        memclk_reset_flag <= memclk_reset && !memclk_reset_rereg;
+    
         if (begin_delayed) running <= 1;
         else if (do_terminate) running <= 0;
         
-        // Gray coded write buffer
-        if (rst_i) write_buffer <= {3{1'b0}};
+        // Gray coded write buffer.
+        if (memclk_reset) write_buffer <= {3{1'b0}};
         else if (do_terminate) begin
             case (write_buffer)
                 3'b000: write_buffer <= 3'b001;
@@ -172,7 +193,7 @@ module uram_event_buffer #(parameter NCHAN = 8,
             endcase
         end        
         // Gray coded complete buffer pointer.
-        if (rst_i) complete_buffer_pointer <= 3'b000;
+        if (memclk_reset) complete_buffer_pointer <= 3'b000;
         else if (do_complete) begin
             case (complete_buffer_pointer)
                 3'b000: complete_buffer_pointer <= 3'b001;
@@ -186,9 +207,13 @@ module uram_event_buffer #(parameter NCHAN = 8,
             endcase                
         end
         
-        terminate_seen <= (write_addr == TERMINATE_VAL) && increment_uaddr;
+        // terminate_seen going high will kill running after a small number of clocks
+        // running going low will end the readout, and everything
+        // resets straight away at the next start.
+        terminate_seen <= ((write_addr == TERMINATE_VAL) && increment_uaddr) || memclk_reset_flag;
 
-        if (increment_uaddr) write_addr <= write_addr + 1;
+        if (memclk_reset) write_addr <= {5{1'b0}};
+        else if (increment_uaddr) write_addr <= write_addr + 1;
         
         if (glob_start) glob_memclk_phase <= GLOB_MEMCLK_PHASE_RESET_VAL;
         else glob_memclk_phase <= glob_memclk_phase + 1;        
@@ -292,23 +317,19 @@ module uram_event_buffer #(parameter NCHAN = 8,
     // go high at data_start_delayed and go low at last                              
     reg data_tvalid = 0;
     
-    // ifclk_rst_i needs to be a flag
-    reg ifclk_reset_holdoff = 0;
-    wire ifclk_reset_delay;
-    SRLC32E u_reset_delay(.D(ifclk_rst_i),
-                          .CE(1'b1),
-                          .CLK(ifclk_i),
-                          .Q31(ifclk_reset_delay));
-    
+    // Note: ifclk_rst_i is just treated straight since it's
+    // in a slower clock domain. This means that functionally
+    // its reset needs to generate the memclk reset and stay
+    // in reset through.
+    // Because the uram needs to handle the reset as well
+    // (to terminate its reading) we generate that reset
+    // sequence outside of here.
     always @(posedge ifclk_i) begin
         if (!ifclk_phase_i)
             data_tlast <= channel_complete && active_chan[7];
 
         if (data_start_delayed) data_tvalid <= 1;
         else if (data_tlast && ifclk_phase_i) data_tvalid <= 0;            
-
-        if (ifclk_rst_i) ifclk_reset_holdoff <= 1;
-        else if (ifclk_reset_delay) ifclk_reset_holdoff <= 0;
         
         completed_ifclk_sync <= complete_buffer_pointer;
         completed_buffer <= completed_ifclk_sync;
@@ -325,7 +346,7 @@ module uram_event_buffer #(parameter NCHAN = 8,
         // 1    0           COMPLETE    1              0           1
         // 2    1           COMPLETE    0              1           1
         // 3    0           IDLE        0              1           0        
-        if (ifclk_reset_holdoff) read_buffer <= 3'b000;
+        if (ifclk_rst_i) read_buffer <= 3'b000;
         else if (state == COMPLETE && !ifclk_phase_i) begin
             case (read_buffer)
                 3'b000: read_buffer <= 3'b001;
@@ -339,11 +360,7 @@ module uram_event_buffer #(parameter NCHAN = 8,
             endcase
         end                       
 
-        // we stay in reset a while to ensure data_available
-        // goes low. Everyone else is reset via RESET_ALL
-        // so it doesn't matter, it'll get reset the instant
-        // we start reading out
-        if (ifclk_reset_holdoff) state <= IDLE;                        
+        if (ifclk_rst_i) state <= IDLE;                        
         else if (ifclk_phase_i) begin
             case (state)
                 IDLE: if (data_available) state <= RESET_ALL;

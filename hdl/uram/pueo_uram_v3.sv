@@ -54,10 +54,17 @@ module pueo_uram_v3 #(
                    parameter READOUT_PHASE = 0)(
         input aclk,
         input aclk_sync_i,
+        // aclk reset resets the *write* portion of the URAM:
+        // this needs to be synchronous across the whole
+        // experiment since it starts up the counters.
         input aclk_rst_i,
         input [NCHAN*NSAMP*NBIT-1:0] dat_i,
 
         input memclk,
+        // memclk_rst_i resets the *read* portion of the URAM.
+        // Essentially memclk_rst_i *stops* runs, and aclk_rst_i
+        // *starts* runs.
+        input memclk_rst_i,
         input memclk_sync_i,
 
         // input REQUEST
@@ -140,6 +147,7 @@ module pueo_uram_v3 #(
     uram_read_counter #(.COUNT_MAX(RDLEN),
                         .ADDR_BITS(ADDRLEN))
         u_counter( .clk_i(memclk),
+                   .rst_i(memclk_rst_i),
                     .start_addr_i( {s_axis_tdata[2 +: (ADDRLEN-2)],2'b00} ),
                     .run_i(read_start),
                     .addr_valid_o(read_active),
