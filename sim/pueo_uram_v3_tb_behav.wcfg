@@ -11,19 +11,17 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="1,262.250 ns"></ZoomStartTime>
-      <ZoomEndTime time="1,674.251 ns"></ZoomEndTime>
-      <Cursor1Time time="1,528.250 ns"></Cursor1Time>
+      <ZoomStartTime time="198,227.750 ns"></ZoomStartTime>
+      <ZoomEndTime time="198,579.751 ns"></ZoomEndTime>
+      <Cursor1Time time="198,310.250 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="233"></NameColumnWidth>
-      <ValueColumnWidth column_width="163"></ValueColumnWidth>
+      <NameColumnWidth column_width="174"></NameColumnWidth>
+      <ValueColumnWidth column_width="129"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="31" />
+   <WVObjectSize size="60" />
    <wave_markers>
-      <marker time="107582" label="" />
-      <marker time="1124350" label="" />
-      <marker time="1466250" label="" />
+      <marker time="1574250" label="" />
    </wave_markers>
    <wvobject fp_name="/pueo_uram_v3_tb/syncclk" type="logic">
       <obj_property name="ElementShortName">syncclk</obj_property>
@@ -192,7 +190,6 @@
    <wvobject fp_name="group258" type="group">
       <obj_property name="label">Detailed Signals</obj_property>
       <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
       <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/next_bram_uaddr" type="array">
          <obj_property name="ElementShortName">next_bram_uaddr[7:0][7:0]</obj_property>
          <obj_property name="ObjectShortName">next_bram_uaddr[7:0][7:0]</obj_property>
@@ -217,5 +214,121 @@
          <obj_property name="ElementShortName">write_addr[4:0]</obj_property>
          <obj_property name="ObjectShortName">write_addr[4:0]</obj_property>
       </wvobject>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/state" type="array">
+      <obj_property name="ElementShortName">state[2:0]</obj_property>
+      <obj_property name="ObjectShortName">state[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/read_buffer" type="array">
+      <obj_property name="ElementShortName">read_buffer[2:0]</obj_property>
+      <obj_property name="ObjectShortName">read_buffer[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/read_address" type="array">
+      <obj_property name="ElementShortName">read_address[6:0]</obj_property>
+      <obj_property name="ObjectShortName">read_address[6:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/completed_buffer" type="array">
+      <obj_property name="ElementShortName">completed_buffer[2:0]</obj_property>
+      <obj_property name="ObjectShortName">completed_buffer[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/active_chan" type="array">
+      <obj_property name="ElementShortName">active_chan[7:0]</obj_property>
+      <obj_property name="ObjectShortName">active_chan[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/active_bram_casdomux" type="array">
+      <obj_property name="ElementShortName">active_bram_casdomux[2:0]</obj_property>
+      <obj_property name="ObjectShortName">active_bram_casdomux[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/active_bram" type="array">
+      <obj_property name="ElementShortName">active_bram[2:0]</obj_property>
+      <obj_property name="ObjectShortName">active_bram[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/data_available" type="logic">
+      <obj_property name="ElementShortName">data_available</obj_property>
+      <obj_property name="ObjectShortName">data_available</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /bram_casdomuxen_i" type="array">
+      <obj_property name="ElementShortName">bram_casdomuxen_i[2:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_casdomuxen_i[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /bram_en_i" type="array">
+      <obj_property name="ElementShortName">bram_en_i[2:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_en_i[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /bram_casdomux_i" type="array">
+      <obj_property name="ElementShortName">bram_casdomux_i[2:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_casdomux_i[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/dout_o" type="array">
+      <obj_property name="ElementShortName">dout_o[7:0]</obj_property>
+      <obj_property name="ObjectShortName">dout_o[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/dout_valid_o" type="logic">
+      <obj_property name="ElementShortName">dout_valid_o</obj_property>
+      <obj_property name="ObjectShortName">dout_valid_o</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/dout_last_o" type="logic">
+      <obj_property name="ElementShortName">dout_last_o</obj_property>
+      <obj_property name="ObjectShortName">dout_last_o</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /dat_o" type="array">
+      <obj_property name="ElementShortName">dat_o[7:0]</obj_property>
+      <obj_property name="ObjectShortName">dat_o[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/bram_uraddr" type="array">
+      <obj_property name="ElementShortName">bram_uraddr[6:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_uraddr[6:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[1].u_chbuffer /bram_raddr_i" type="array">
+      <obj_property name="ElementShortName">bram_raddr_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_raddr_i[11:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/active_chan" type="array">
+      <obj_property name="ElementShortName">active_chan[7:0]</obj_property>
+      <obj_property name="ObjectShortName">active_chan[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /bram_en_i" type="array">
+      <obj_property name="ElementShortName">bram_en_i[2:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_en_i[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[1].u_chbuffer /bram_en_i" type="array">
+      <obj_property name="ElementShortName">bram_en_i[2:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_en_i[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/bram_lraddr" type="array">
+      <obj_property name="ElementShortName">bram_lraddr[1:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_lraddr[1:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/channel_complete" type="logic">
+      <obj_property name="ElementShortName">channel_complete</obj_property>
+      <obj_property name="ObjectShortName">channel_complete</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/syncclk_phase" type="logic">
+      <obj_property name="ElementShortName">syncclk_phase</obj_property>
+      <obj_property name="ObjectShortName">syncclk_phase</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /bram_raddr_i" type="array">
+      <obj_property name="ElementShortName">bram_raddr_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_raddr_i[11:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /bram_regce_i" type="logic">
+      <obj_property name="ElementShortName">bram_regce_i</obj_property>
+      <obj_property name="ObjectShortName">bram_regce_i</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[1].u_chbuffer /bram_casdomux_i" type="array">
+      <obj_property name="ElementShortName">bram_casdomux_i[2:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_casdomux_i[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /bram_casdomux_i" type="array">
+      <obj_property name="ElementShortName">bram_casdomux_i[2:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_casdomux_i[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/\CH[0].u_chbuffer /bram_casdomuxen_i" type="array">
+      <obj_property name="ElementShortName">bram_casdomuxen_i[2:0]</obj_property>
+      <obj_property name="ObjectShortName">bram_casdomuxen_i[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/pueo_uram_v3_tb/u_evbuf/dout_last_o" type="logic">
+      <obj_property name="ElementShortName">dout_last_o</obj_property>
+      <obj_property name="ObjectShortName">dout_last_o</obj_property>
    </wvobject>
 </wave_config>
