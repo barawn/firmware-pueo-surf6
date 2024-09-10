@@ -47,3 +47,10 @@ set_property -dict { PACKAGE_PIN M29 } [get_ports { B128_CLK_N[0] }]
 set_property -dict { PACKAGE_PIN K28 } [get_ports { B128_CLK_P[1] }]
 set_property -dict { PACKAGE_PIN K29 } [get_ports { B128_CLK_N[1] }]
 
+set_property -dict { PACKAGE_PIN H28 } [get_ports { B129_CLK_P[0] }]
+set_property -dict { PACKAGE_PIN H29 } [get_ports { B129_CLK_N[0] }]
+set_property -dict { PACKAGE_PIN F28 } [get_ports { B129_CLK_P[1] }]
+set_property -dict { PACKAGE_PIN F29 } [get_ports { B129_CLK_N[1] }]
+
+
+
