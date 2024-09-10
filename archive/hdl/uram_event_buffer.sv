@@ -1,6 +1,5 @@
 `timescale 1ns / 1ps
 `include "interfaces.vh"
-`define DLYFF #0.1
 // URAM-to-Event buffer.
 // This interfaces with pueo_uram_v3+ only!
 //
@@ -52,10 +51,7 @@
 // NOTE NOTE NOTE NOTE NOTE NOTE NOTE
 // This module produces valid new data when syncclk_phase is HIGH
 // tvalid is asserted then.
-//
-// THIS VERSION CAN ACTUALLY BE IMPLEMENTED:
-// IT USES THE BRAM IN A STANDARD DATA OUTPUT CASCADE ONLY, NO PIPELINING
-module uram_event_buffer_v2 #(parameter NCHAN = 8,
+module uram_event_buffer #(parameter NCHAN = 8,
                            parameter NBIT_IN = 72,
                            parameter BEGIN_PHASE = 1,
                            parameter DOUT_LATENCY = 6)(
@@ -269,19 +265,37 @@ module uram_event_buffer_v2 #(parameter NCHAN = 8,
     reg [2:0] completed_ifclk_sync = {3{1'b0}};
     // actual version to use
     reg [2:0] completed_buffer = {3{1'b0}};
-    // data is available
-    reg data_available = 0;
-    // from state machine
-    wire readout_complete;
-
-    wire [7:0] last_data;
-    reg [7:0]  event_data = {8{1'b0}};
-    wire       event_valid;
-        
-    // reset at LOAD_ENABLE_HEADER1, shift at ADDR3_SHIFT_ENABLE
-    wire [2:0] active_bram;
-    wire [2:0] active_bram_casdomux;
-    wire [NCHAN-1:0] active_chan;    
+    
+    // once we have a buffer to read, the sequence basically looks like
+    // en   addr    casdomux_i  casdomuxen_i    dout
+    // 000  003     24'hFFFFFE  0               X
+    // 001  000     24'hFFFFFE  1               X
+    // 001  001     24'hFFFFFC  0               X
+    // 001  002     ..          0               ARAM[0]
+    // 001  003     ..          0               ARAM[1]
+    // 010  000     24'hFFFFFC  1               ARAM[2]
+    // 010  001     24'hFFFFFC  0               ARAM[3]
+    // etc.
+    // Note that casdomux_i[1:0] actually go to bram_casdomux_i
+    // but casdomux[2] actually goes to casoregimux (same with the _en).
+    // because the C BRAM feeds into its pipeline register before
+    // going to the next channel.
+    //
+    // because of the 2 clock phase the sequence actually only
+    // toggles stuff every other phase.
+    // the other thing to consider is the *order* to read out
+    // in. Reading out bottom to top means a longer initial
+    // latency but it just means a channel switch is a delay
+    // to let the other data clear through.
+    reg [NCHAN-1:0] bram_regce = {NCHAN{1'b0}};
+    // the bram CAS and enable stuff need to cycle when
+    // they're active.
+    reg [2:0] active_bram = 3'b001;
+    wire [2:0] active_bram_casdomux =
+        { !active_bram[2],
+          !active_bram[1],
+          !active_bram[0] };
+    reg [NCHAN-1:0] active_chan = 8'b00000001;    
     wire [3*NCHAN-1:0] full_casdomux = {
         !active_chan[7] ? 3'b111 : active_bram_casdomux,
         !active_chan[6] ? 3'b111 : active_bram_casdomux,
@@ -291,177 +305,157 @@ module uram_event_buffer_v2 #(parameter NCHAN = 8,
         !active_chan[2] ? 3'b111 : active_bram_casdomux,
         !active_chan[1] ? 3'b111 : active_bram_casdomux,
         active_bram_casdomux };
-    wire [8:0] bram_raddr;
-
-//    wire bram_casdomuxen = (state[1:0] == 2'b00) && dout_data_phase_i;
-    // because of our state encoding 
-//    wire [1:0] bram_lraddr = state[1:0];
-//    // need 7 bits here
-//    reg [6:0] bram_uraddr = {7{1'b0}};
-//    // I don't know why the v1 module had these backwards, that CANNOT be right
-//    wire [9:0] bram_addr = { read_buffer, bram_uraddr, bram_lraddr };
-//    // everything is finished. this gets set, then cleared, but it's not a flag.
-//    reg readout_complete = 0;
-//    // channel complete
-//    reg channel_complete = 0;
-
-    wire [31:0] header_data;
-    wire header_data_valid;
-    wire header_data_read;
-    wire select_header_data;
-    // read top byte first
-    wire [1:0] header_data_addr = ~bram_raddr[1:0];
-    event_hdr_fifo u_hdr_fifo(.wr_clk(memclk_i),
-                              .rd_clk(ifclk_i),
-                              .rst( memclk_rst_i ),
-                              .din( { event_no_i , 1'b0, trig_time_i } ),
-                              .wr_en(trig_valid_i),
-                              .full(),
-                              .dout( header_data ),
-                              .valid( header_data_valid ),
-                              .rd_en( header_data_read ));
-
+              
+    reg bram_casdomuxen = 1'b0;
+    // 2 address bits here. 3 for the buffer, means...
+    reg [1:0] bram_lraddr = {2{1'b0}};
+    // need 7 bits here
+    reg [6:0] bram_uraddr = {7{1'b0}};
+    wire [9:0] bram_addr = { read_buffer, bram_lraddr, bram_uraddr };
+    
+    // reading we can do in a state machine
+    localparam FSM_BITS = 3;
+    localparam [FSM_BITS-1:0] IDLE = 0;
+    localparam [FSM_BITS-1:0] RESET_ALL = 1;
+    localparam [FSM_BITS-1:0] CH_ADVANCE = 2;
+    localparam [FSM_BITS-1:0] READING = 3;
+    localparam [FSM_BITS-1:0] COMPLETE = 4;
+    localparam [FSM_BITS-1:0] FW_LOAD = 5;
+    reg [FSM_BITS-1:0] state = IDLE;
+    reg channel_complete = 0;
+    reg data_available = 0;
+    reg read_terminate = 0;
     (* CUSTOM_CC_DST = "IFCLK" *)
     reg [1:0] loading_fw = {2{1'b0}};
+
+    wire data_start = (state == RESET_ALL && dout_data_phase_i && !loading_fw[1]);
+    wire data_start_delayed;
+    // number of header bytes
+    localparam NUM_HEADERS = 4;
+    // delay from data_start to transition on event start
+    // 17 clocks from data_start is when the first valid data pops
+    // on last_data. The odd number is because the first bit in
+    // the SRL goes high in !ifclk_phase_i: so to get a single
+    // ifclk_phase delay the SRL input would need to be 1.
+    localparam DATA_START_DELAY = 17 - NUM_HEADERS*2;
+    localparam [4:0] SRL_VALID_DELAY_VAL = DATA_START_DELAY;
+    SRLC32E u_valid_delay(.D(data_start),
+                          .A(SRL_VALID_DELAY_VAL),
+                          .Q(data_start_delayed),
+                          .CLK(ifclk_i),
+                          .CE(1'b1));
+    // go high when channel_complete and active_chan[7] and !ifclk_phase_i
+    reg data_tlast = 0;                          
+//    // go high at data_start_delayed and go low at last                              
+//    reg data_tvalid = 0;
     
+    // Note: ifclk_rst_i is just treated straight since it's
+    // in a slower clock domain. This means that functionally
+    // its reset needs to generate the memclk reset and stay
+    // in reset through.
+    // Because the uram needs to handle the reset as well
+    // (to terminate its reading) we generate that reset
+    // sequence outside of here.
+    //
+    // HOW THE SLEAZEBALL WORKS
+    // OUR FIRST ATTEMPT JUST USES ONE SINGLE BLOCK RAM AS A BUFFER
+    // 
+
     always @(posedge ifclk_i) begin
-        loading_fw <= `DLYFF { loading_fw[0], fw_load_i };
+        loading_fw <= { loading_fw[0], fw_load_i };
+        
+        if (ifclk_rst_i)
+            data_tlast <= 1'b0;
+        else if (!dout_data_phase_i)
+            data_tlast <= channel_complete && active_chan[7];
 
-        // this is the done buffer pointer clock crossing
-        completed_ifclk_sync <= `DLYFF complete_buffer_pointer;
-        // and in ifclk. I'm not actually sure I need this?
-        // they're actually synchronous?
-        completed_buffer <= `DLYFF completed_ifclk_sync;
-        // do we need to do something
-        data_available <= `DLYFF (completed_buffer != read_buffer);
-        // channel change indicator
-        // this sets one clock ahead of where it's needed
-        // no need to qualify on full
-//        if (dout_data_phase_i)
-//            channel_complete <= `DLYFF active_bram[2] && bram_uraddr == 7'h7F && bram_lraddr == 2'h2;
+//        if ((data_tlast && ifclk_phase_i) || ifclk_rst_i) data_tvalid <= 0;
+//        else if (data_start_delayed) data_tvalid <= 1;
+        
+        completed_ifclk_sync <= complete_buffer_pointer;
+        completed_buffer <= completed_ifclk_sync;
+        data_available <= (completed_buffer != read_buffer);
+        channel_complete <= ({bram_uraddr, bram_lraddr} == 9'h1FF) && active_bram[2];        
+        if (state == COMPLETE || ifclk_rst_i)
+            read_terminate <= 0;
+        else if (channel_complete && active_chan[7])
+            read_terminate <= 1;
 
-        // readout complete isn't a flag, we set it when we see the finish
-//        if (dout_data_phase_i) begin
-//            if (state == DATA0_ADDR1) `DLYFF readout_complete <= 0;
-//            else if (channel_complete && active_chan[7]) `DLYFF readout_complete <= 1;
-//        end
-
-        // read buffer will be valid ADDR1_SHIFT_CASDOMUX
-        // and then data_available will be valid back in idle
-        // VERIFY THIS
-        if (ifclk_rst_i) read_buffer <= `DLYFF 3'b000;
-        else if (readout_complete) begin
+        // this ONLY WORKS because we've got a 2-clock period
+        // clk  ifclk_phase state       read_terminate read_buffer data_available
+        // 0    1           CH_ADVANCE  1              0           1
+        // 1    0           COMPLETE    1              0           1
+        // 2    1           COMPLETE    0              1           1
+        // 3    0           IDLE        0              1           0        
+        if (ifclk_rst_i) read_buffer <= 3'b000;
+        else if (state == COMPLETE && !dout_data_phase_i) begin
             case (read_buffer)
-                3'b000: read_buffer <= `DLYFF 3'b001;
-                3'b001: read_buffer <= `DLYFF 3'b011;
-                3'b011: read_buffer <= `DLYFF 3'b010;
-                3'b010: read_buffer <= `DLYFF 3'b110;
-                3'b110: read_buffer <= `DLYFF 3'b111;
-                3'b111: read_buffer <= `DLYFF 3'b101;
-                3'b101: read_buffer <= `DLYFF 3'b100;
-                3'b100: read_buffer <= `DLYFF 3'b000;
+                3'b000: read_buffer <= 3'b001;
+                3'b001: read_buffer <= 3'b011;
+                3'b011: read_buffer <= 3'b010;
+                3'b010: read_buffer <= 3'b110;
+                3'b110: read_buffer <= 3'b111;
+                3'b111: read_buffer <= 3'b101;
+                3'b101: read_buffer <= 3'b100;
+                3'b100: read_buffer <= 3'b000;
             endcase
         end                       
-        
-        if (dout_data_phase_i) begin
-            // FIX THIS REVERSE THE ORDER
-            if (select_header_data) event_data <= `DLYFF header_data[8*header_data_addr[1:0] +: 8];
-            else event_data <= `DLYFF last_data;
+
+        if (ifclk_rst_i) state <= IDLE;                        
+        else if (dout_data_phase_i || loading_fw[1]) begin
+            case (state)
+                IDLE: if (data_available || loading_fw[1]) state <= RESET_ALL;
+                RESET_ALL: if (loading_fw[1]) state <= FW_LOAD;
+                           else state <= CH_ADVANCE;
+                CH_ADVANCE: if (read_terminate) state <= COMPLETE;
+                            else state <= READING;
+                READING: if (channel_complete) state <= CH_ADVANCE;               
+                COMPLETE: state <= IDLE;
+                FW_LOAD: if (!loading_fw[1]) state <= IDLE;
+            endcase
         end
-//        if (dout_data_phase_i) begin
-//            event_data_valid <= `DLYFF (state == IDLE_HEADER0_ADDR1) ? data_available : !state[3];
-//        end
+        // the weird "start with 7 and loop around" bit
+        // allows us to put CH_ADVANCE in the reset process
+        if (state == RESET_ALL) begin
+            // hackhack. we might not need this, maybe we just
+            // shove it into the top BRAM
+            if (!loading_fw[1]) active_chan <= 8'b10000000;
+            else active_chan <= 8'b00000001;
+        end else if (state == CH_ADVANCE && dout_data_phase_i)
+            active_chan <= {active_chan[6:0],active_chan[7]};
 
-//        if (dout_data_phase_i) begin
-//            case (state)
-//                IDLE_HEADER0_ADDR1: if (data_available) state <= `DLYFF HEADER1_ADDR2;
-//                HEADER1_ADDR2: state <= `DLYFF HEADER2_ADDR3;
-//                HEADER2_ADDR3: state <= `DLYFF HEADER3_ADDR0;
-//                HEADER3_ADDR0: state <= `DLYFF DATA0_ADDR1;
-//                DATA0_ADDR1: state <= `DLYFF DATA1_ADDR2;
-//                DATA1_ADDR2: state <= `DLYFF DATA2_ADDR3;
-//                DATA2_ADDR3: state <= `DLYFF DATA3_ADDR0;
-//                DATA3_ADDR0: state <= `DLYFF DATA0_ADDR1;
-//            endcase                
-//        end
-
-//          if (ifclk_rst_i) state <= `DLYFF IDLE_HEADER0_ADDR1;
-//          else if (dout_data_phase_i || loading_fw[1]) begin
-//            case (state)
-//                IDLE_HEADER0_ADDR1: if (loading_fw[1]) state <= `DLYFF FW_LOADING_0;
-//                                    else if (data_available) state <= `DLYFF HEADER1_ADDR2;
-//                HEADER1_ADDR2: state <= `DLYFF HEADER2_ADDR3;
-//                HEADER2_ADDR3: state <= `DLYFF HEADER3_ADDR0;
-//                HEADER3_ADDR0: state <= `DLYFF DATA1_ADDR2;
-//                DATA0_ADDR1: state <= `DLYFF DATA1_ADDR2;
-////                DATA0_ADDR1_END: begin
-////                                    if (readout_complete) state <= `DLYFF IDLE_HEADER0_ADDR1;
-////                                    else state <= `DLYFF DATA1_ADDR2;
-////                                 end
-////                
-//                DATA1_ADDR2: state <= `DLYFF DATA2_ADDR3;
-//                DATA2_ADDR3: state <= `DLYFF DATA3_ADDR0;
-//                DATA3_ADDR0: state <= `DLYFF DATA0_ADDR1;
-//                FW_LOADING_0: if (!loading_fw[1]) state <= `DLYFF IDLE_HEADER0_ADDR1;
-//                              else if (fw_wr_i) state <= `DLYFF FW_LOADING_1;
-//                FW_LOADING_1: if (!loading_fw[1]) state <= `DLYFF IDLE_HEADER0_ADDR1;
-//                              else if (fw_wr_i) state <= `DLYFF FW_LOADING_2;
-//                FW_LOADING_2: if (!loading_fw[1]) state <= `DLYFF IDLE_HEADER0_ADDR1;
-//                              else if (fw_wr_i) state <= `DLYFF FW_LOADING_3;
-//                FW_LOADING_3: if (!loading_fw[1]) state <= `DLYFF IDLE_HEADER0_ADDR1;
-//                              else if (fw_wr_i) state <= `DLYFF FW_LOADING_0;
-//            endcase
-//          end
-          // uaddr logic: 
-          // if (state == DATA2_ADDR3 && active_bram[2]) or FW_LOADING_3 && fw_wr_i
-          // reset at idle always
-//          if (state == IDLE_HEADER0_ADDR1)
-//                bram_uraddr <= `DLYFF {7{1'b0}};
-//          else if ((state == DATA2_ADDR3 && active_bram[2] && dout_data_phase_i) ||
-//                   (state == FW_LOADING_3 && fw_wr_i))
-//                bram_uraddr <= `DLYFF bram_uraddr + 1;
-          // STILL TO DO:
-          // --> active bram shift -- DONE
-          // --> active channel shift -- DONE
-          // --> data muxing -- DONE
-          // --> last indicator
-          
-          // ACTIVE CHANNEL SHIFT
-//          if (dout_data_phase_i) begin
-//            if (state == IDLE_HEADER0_ADDR1)
-//                active_chan <= `DLYFF { {7{1'b0}}, data_available || loading_fw[1] };
-//            else if (channel_complete)
-//                active_chan <= `DLYFF {active_chan[6:0],1'b0};
-//          end
-//          // ACTIVE BRAM SHIFT
-//          if (dout_data_phase_i) begin
-//            if (state == IDLE_HEADER0_ADDR1)
-//                active_bram <= `DLYFF 3'b001;
-//            else if (state == DATA2_ADDR3)
-//                active_bram <= `DLYFF {active_bram[1:0],active_bram[2]};
-//          end
+        // SIMPLE SLEAZEBALLS: EVERY TIME WE SEE A WRITE, INCREMENT
+        // IT'S YOUR DAMN JOB TO FIX IT BY RESETTING
+        // RIGHT NOW WITH THIS METHOD WE CAN ONLY STORE 1 BRAM WORTH
+        // OF DATA 
+        if (state == RESET_ALL) begin
+            bram_lraddr <= 2'b00;
+        end else if ((state == READING && !dout_data_phase_i) || fw_wr_i ) begin
+            bram_lraddr <= bram_lraddr + 1;
+        end
+        if (state == RESET_ALL) begin
+            active_bram <= 3'b001;
+        end else if ((state == READING && !dout_data_phase_i) && bram_lraddr == 2'b11) begin
+            active_bram <= {active_bram[1:0],active_bram[2]};
+        end            
+        if (state == RESET_ALL) begin
+            bram_uraddr <= {5{1'b0}};
+        end else if (((state == READING && !dout_data_phase_i && active_bram[2]) || fw_wr_i) && bram_lraddr == 2'b11) begin
+            bram_uraddr <= bram_uraddr + 1;
+        end            
+        if (state == CH_ADVANCE) bram_casdomuxen <= 1;
+        else if (state == READING && !dout_data_phase_i && bram_lraddr == 2'b11) bram_casdomuxen <= 1;
+        else bram_casdomuxen <= 0;
     end
-
-    uram_event_readout_sm u_sm(.clk_i(ifclk_i),
-                               .clk_ce_i(dout_data_phase_i),
-                               .data_available_i(data_available),
-                               .complete_o(readout_complete),
-                               .bram_addr_o(bram_raddr),
-                               .bram_en_o(active_bram),
-                               .casdomux_o(active_bram_casdomux),
-                               .casdomuxen_o(bram_casdomuxen),
-                               .channel_en_o(active_chan),
-                               .sel_header_o(select_header_data),
-                               .header_rd_o(header_data_read),
-                               .valid_o(event_valid),
-                               .fw_loading_i(loading_fw[1]),
-                               .fw_wr_i(fw_wr_i));
 
     // cascades
     wire [35:0] cas_doutb[NCHAN-1:0];
     wire [35:0] cas_dinb[NCHAN-1:0];
 
-    assign cas_dinb[0] = {36{1'b0}};        
+    assign cas_dinb[0] = {36{1'b0}};
+        
+    wire [7:0] last_data;
+    reg [7:0]  last_data_store = {8{1'b0}};
     
     assign next_bram_uaddr[0] = { write_buffer, write_addr };
     generate
@@ -475,7 +469,7 @@ module uram_event_buffer_v2 #(parameter NCHAN = 8,
             wire [2:0] this_bram_casdomuxen = {3{bram_casdomuxen}};
             wire [2:0] this_bram_en = active_chan[i] ? active_bram : 3'b000;
             wire this_bram_regce = !dout_data_phase_i;
-            wire [11:0] this_bram_raddr = { read_buffer, bram_raddr };
+            wire [11:0] this_bram_raddr = { read_buffer, bram_uraddr, bram_lraddr };
             wire [7:0] this_bram_dat_o;
             wire [7:0] this_bram_upd_dat = {8{1'b0}};
             wire this_bram_upd_wr = 1'b0;
@@ -511,10 +505,96 @@ module uram_event_buffer_v2 #(parameter NCHAN = 8,
                            .cascade_out_o(cas_doutb[i] ));
         end
     endgenerate        
+
+    // flag the readout to begin
+    wire readout_begin;
+    // OK, here's our event header.
+    // the stupidity of this cannot be overstated
+    wire [31:0] header_data;
+    wire header_data_valid;
+    wire header_data_read;
+    event_hdr_fifo u_hdr_fifo(.wr_clk(memclk_i),
+                              .rd_clk(ifclk_i),
+                              .rst( memclk_rst_i ),
+                              .din( { event_no_i , 1'b0, trig_time_i } ),
+                              .wr_en(trig_valid_i),
+                              .full(),
+                              .dout( header_data ),
+                              .valid( header_data_valid ),
+                              .rd_en( header_data_read ));
+    localparam EVBITS = 3;
+    localparam [EVBITS-1:0] EVIDLE = 0;
+    localparam [EVBITS-1:0] HEADER_0 = 1;
+    localparam [EVBITS-1:0] HEADER_1 = 2;
+    localparam [EVBITS-1:0] HEADER_2 = 3;
+    localparam [EVBITS-1:0] HEADER_3 = 4;
+    localparam [EVBITS-1:0] DATA = 5;
+    localparam [EVBITS-1:0] LAST = 6;
+    reg [EVBITS-1:0] evstate = {EVBITS{1'b0}};
+    reg [7:0] output_data = {8{1'b0}};
+    reg       output_tlast = 0;
+    reg       output_tvalid = 0;
     
-    assign dout_data_o = event_data;
-    assign dout_data_valid_o= event_valid;
-    // screw this for now
-    assign dout_data_last_o = 1'b0;
+    // overall sequence
+    // note that we grab data on !phase, not on phase
+    // and we transition on phase
+    // also note that data_start_delayed is *8 CLOCKS* before
+    // data becomes valid
+    // clk  phase   evstate     last_data   output_data data_start_delayed  tlast
+    // 0    0       EVIDLE      X           X           0                   X
+    // 1    1       EVIDLE      X           X           1                   X
+    // 2    0       HEADER_0    X           X           0                   X
+    // 3    1       HEADER_0    X           header[0]   0                   X
+    // 4    0       HEADER_1    X           header[0]   0                   X
+    // 5    1       HEADER_1    X           header[1]   0                   X
+    // 6    0       HEADER_2    X           header[1]   0                   X
+    // 7    1       HEADER_2    X           header[2]   0                   X
+    // 8    0       HEADER_3    X           header[2]   0                   X
+    // 9    1       HEADER_3    data[0]     header[3]   0                   X
+    // 10   0       DATA        data[0]     header[3]   0                   X
+    // 11   1       DATA        data[1]     data[0]     0                   1
+    // 12   0       LAST        data[1]     data[0]     0                   1
+    // 13   1       LAST        X           data[1]     0                   X
+    // 14   0       EVIDLE      X           data[1]     0                   X
+    // etc.
+
+    assign header_data_read = (state == LAST && dout_data_phase_i);
+    
+    // data_start_delayed needs to be synced up to the correct
+    // phase, or else this will never work.
+    always @(posedge ifclk_i) begin
+        last_data_store <= last_data;
+        // we capture on !phase, transition on phase
+        if (ifclk_rst_i) evstate <= EVIDLE;
+        else if (dout_data_phase_i) begin
+            case (evstate)
+                EVIDLE: if (data_start_delayed) evstate <= HEADER_0;
+                HEADER_0: evstate <= HEADER_1;
+                HEADER_1 : evstate <= HEADER_2;
+                HEADER_2 : evstate <= HEADER_3;
+                HEADER_3 : evstate <= DATA;
+                DATA : if (data_tlast) evstate <= LAST;
+                LAST : evstate <= EVIDLE;
+            endcase
+        end  
+        // capture on !phase to present tvalid on phase      
+        if (!dout_data_phase_i) begin
+            if (evstate == HEADER_0) output_data <= header_data[31:24];
+            else if (evstate == HEADER_1) output_data <= header_data[23:16];
+            else if (evstate == HEADER_2) output_data <= header_data[15:8];
+            else if (evstate == HEADER_3) output_data <= header_data[7:0];
+            else output_data <= last_data_store;
+        end
+        
+        if (!dout_data_phase_i) output_tlast <= (evstate == LAST);
+        
+        // tvalid goes high in !ifclk_phase_i if evstate != EVIDLE
+        if (evstate != EVIDLE) output_tvalid <= !dout_data_phase_i;
+        else output_tvalid <= 1'b0;
+    end 
+    
+    assign dout_data_o = output_data;
+    assign dout_data_valid_o= output_tvalid;
+    assign dout_data_last_o = output_tlast;
         
 endmodule
