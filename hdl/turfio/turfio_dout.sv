@@ -30,10 +30,12 @@ module turfio_dout(
         input       ifclk_sync_i,
         
         input       train_i,
-        
-        input [7:0] s_axis_tdata,
-        input       s_axis_tvalid,
-        output      s_axis_tready,
+
+        // this used to be an AXI4-Stream input
+        // that was stupid
+        input [7:0] dout_data_i,
+        input       dout_data_valid_i,
+        output      dout_data_phase_o,
         
         output      DOUT_P,
         output      DOUT_N                
@@ -116,7 +118,7 @@ module turfio_dout(
         // occurs in clocks 1/3/5/7/9/11/13/15
         if (!tx_phase) begin
             if (training) tx_data <= TRAIN_VALUE;
-            else if (s_axis_tvalid) tx_data <= s_axis_tdata;
+            else if (dout_data_valid_i) tx_data <= dout_data_i;
             else tx_data <= {8{1'b0}};
         end else begin
             // we always shift DOWN
@@ -124,7 +126,7 @@ module turfio_dout(
         end
     end
     
-    assign s_axis_tready = !tx_phase && !training;
+    assign dout_data_phase_o = !tx_phase && !training;
     
     wire oddre2_out;
     ODDRE1 #(.SRVAL(INV_DOUT)) u_dout_ddr(.C(ifclk_x2_i),

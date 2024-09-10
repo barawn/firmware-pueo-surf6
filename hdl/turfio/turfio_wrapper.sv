@@ -8,7 +8,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                         parameter INV_COUT = 1'b0,
                         parameter INV_RXCLK = 1'b0,
                         parameter INV_TXCLK = 1'b0,
-                        parameter INV_DOUT = 1'b0)(
+                        parameter INV_DOUT = 1'b0,
+                        parameter WB_CLK_TYPE = "PSCLK")(
         input wb_clk_i,
         input wb_rst_i,
         `TARGET_NAMED_PORTS_WB_IF(wb_ , 11, 32),
@@ -33,6 +34,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         // this is a synchronize response to align stuff
         input  ifclk_sync_i,
 
+        output rackclk_o,
+
         output rxclk_o,
         input rxclk_ok_i,
 
@@ -43,14 +46,15 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         input response_valid_i,
 
         // this is the DOUT path, in IFCLK domain
-        input [7:0] s_dout_tdata,
-        input       s_dout_tvalid,
-        output      s_dout_tready,
+        input [7:0] dout_data_i,
+        input       dout_data_valid_i,
+        output      dout_data_phase_o,
 
         input RXCLK_P,
         input RXCLK_N,
-        output TXCLK_P,
-        output TXCLK_N,
+        // drop this for now
+        //output TXCLK_P,
+        //output TXCLK_N,
         input CIN_P,
         input CIN_N,
         output COUT_P,
@@ -69,7 +73,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         ifclk_out <= ifclk_capture;
     end
     // what-freaking-ever
-    obufds_autoinv #(.INV(INV_TXCLK)) u_txclk(.I(1'b0),.O_P(TXCLK_P),.O_N(TXCLK_N));
+    //obufds_autoinv #(.INV(INV_TXCLK)) u_txclk(.I(1'b0),.O_P(TXCLK_P),.O_N(TXCLK_N));
     obufds_autoinv #(.INV(INV_COUT)) u_cout(.I(1'b0),.O_P(COUT_P),.O_N(COUT_N));
 //    obufds_autoinv #(.INV(INV_DOUT)) u_dout(.I(ifclk_out),.O_P(DOUT_P),.O_N(DOUT_N));    
 
@@ -104,7 +108,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     
     wire [1:0] train_en;
 
-    turfio_register_core #(.CAPTURE_DATA_WIDTH(32))
+    turfio_register_core #(.CAPTURE_DATA_WIDTH(32),
+                           .WBCLKTYPE(WB_CLK_TYPE))
         u_registers(.wb_clk_i(wb_clk_i),
                     .wb_rst_i(wb_rst_i),
                     `CONNECT_WBS_IFS(wb_ , wb_ ),
@@ -166,6 +171,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         
     turfio_rxclk_gen #(.INV_RXCLK(INV_RXCLK))
         u_rxclk(.rxclk_in(rxclk_norm),
+                .rackclk_o(rackclk_o),
                 .rxclk_o(rxclk),
                 .rxclk_x2_o(rxclk_x2),
                 .rxclk_x3_o(rxclk_x3),
@@ -245,7 +251,11 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                .ifclk_x2_i(ifclk_x2_i),
                .ifclk_sync_i(ifclk_sync_i),
                .train_i(train_en[1]),
-               `CONNECT_AXI4S_MIN_IF( s_axis_ , s_dout_ ),
+                // get rid of the fake AXI4-Stream interface
+                // name it strictly
+               .dout_data_i(dout_data_i),
+               .dout_data_valid_i(dout_data_valid_i),
+               .dout_data_phase_o(dout_data_phase_o),
                .DOUT_P(DOUT_P),
                .DOUT_N(DOUT_N));
         

@@ -3,6 +3,12 @@
 // This is way more complicated than the TURFIO -> TURF case.
 module turfio_rxclk_gen #(parameter INV_RXCLK = 1'b0)(
         input rxclk_in,
+        // RACKCLK is the *raw* RXCLK input. It comes straight from
+        // the TURFIO, and doesn't go through the MMCM.
+        // It's used for the RACKctl interface along with the
+        // rxclk ok detection.
+        output rackclk_o,
+        // These are outputs from the MMCM.
         output rxclk_o,
         output rxclk_x2_o,
         output rxclk_x3_o,
@@ -34,7 +40,8 @@ module turfio_rxclk_gen #(parameter INV_RXCLK = 1'b0)(
     // CLK300 main output
     wire clk300_to_bufg;
     
-    // Clocking    
+    // Clocking.
+    BUFG u_rackclk(.I(rxclk_in),.O(rackclk_o));    
     BUFG u_rxclk_fb(.I(rxclk_fb_to_bufg),.O(rxclk_fb_bufg));
     BUFG u_rxclk_bufg(.I(rxclk_to_bufg),.O(rxclk_o));
     BUFG u_rxclk_x2_bufg(.I(rxclk_x2_to_bufg),.O(rxclk_x2_o));

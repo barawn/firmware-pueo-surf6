@@ -2,7 +2,8 @@
 // rip out portions of the turfio_bit/turfio_cin_parallel_sync from TURF
 // bit different since we operate in rxclk domain
 module turfio_cin_surf #(parameter INV=1'b0,
-                         parameter CLKTYPE="RXCLK"
+                         parameter CLKTYPE="RXCLK",
+                         parameter DEBUG = "TRUE"
         )(
         // rxclk
         input rxclk_i,
@@ -23,8 +24,6 @@ module turfio_cin_surf #(parameter INV=1'b0,
         input CIN_P,
         input CIN_N
     );
-    
-    parameter DEBUG = "TRUE";
     
     // both a source and destination for cross-clock
     (* CUSTOM_CC_SRC = CLKTYPE, CUSTOM_CC_DST = CLKTYPE *)

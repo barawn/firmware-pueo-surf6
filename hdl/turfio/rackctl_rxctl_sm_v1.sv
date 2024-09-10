@@ -4,8 +4,13 @@
 // and loop (txn_valid_flag_o && txn_addr_o[23]) to txn_done_flag_i and
 // put some fixed value in txn_resp_i.
 // rst_i should be set when rxclk_ok_i goes low and then cleared a few clocks later.
+//
+// NOTE: 'rxclk_i' here is really rackclk, the free-running version of the RXCLK input.
+// We call it rxclk here because that's what we started out calling it (oops).
+// This module is probably generically useful in other projects so we'll leave it alone.
 module rackctl_rxctl_sm_v1 #(parameter INV=1'b0,
-                             parameter DEBUG="FALSE")(
+                             parameter DEBUG="FALSE",
+                             parameter RXCLK_TYPE="NONE")(
         // rxclk input
         input rxclk_i,
         // sync reset
@@ -56,15 +61,19 @@ module rackctl_rxctl_sm_v1 #(parameter INV=1'b0,
     // just use 128.
     reg [7:0] turnaround_timer = {8{1'b0}};
     
-    (* IOB = "TRUE", CUSTOM_IGN_DST = "RXCLK" *)
+    (* IOB = "TRUE", CUSTOM_IGN_DST = RXCLK_TYPE *)
     reg rackctl_in_ff = 0;
     reg rackctl_in_ff_rereg = 0;
-    (* IOB = "TRUE", CUSTOM_IGN_DST = "RXCLK" *)
+    (* IOB = "TRUE", CUSTOM_IGN_DST = RXCLK_TYPE *)
     reg rackctl_mon_ff = 0;
     // this is both the input AND output shift register.
     // Unlike the bidir tests, we don't use the direct input.
+    // this is a source (for mode0 data) and a destination (for mode0/1 response)
+    (* CUSTOM_CC_SRC = RXCLK_TYPE, CUSTOM_CC_DST = RXCLK_TYPE *)
     reg [31:0] data_capture = {31{1'b0}};
     // this is the address capture. it grabs from data_capture when exiting.
+    // this is only a source (for mode0 address)
+    (* CUSTOM_CC_SRC = RXCLK_TYPE *)
     reg [23:0] txn_capture = {24{1'b0}};
     
     // Note: we idle at 1, so the preamble is technically just 0101.
@@ -120,7 +129,7 @@ module rackctl_rxctl_sm_v1 #(parameter INV=1'b0,
     
     // IOB controls    
     // this is called drive_rackctl_b because it's the T input (so if 1 = tristate)
-    (* KEEP = "TRUE", IOB = "TRUE", CUSTOM_IGN_SRC = "RXCLK" *)
+    (* KEEP = "TRUE", IOB = "TRUE", CUSTOM_IGN_SRC = RXCLK_TYPE *)
     reg drive_rackctl_b = 1;
     // this is drive_rackctl_mon because it's NOT inverted
     (* KEEP = "TRUE" *)
@@ -265,7 +274,7 @@ module rackctl_rxctl_sm_v1 #(parameter INV=1'b0,
     // state
     // data_counter
     generate
-        if (DEBUG == "TRUE") begin
+        if (DEBUG == "TRUE") begin : ILA
             rackctl_ila u_ila(.clk(rxclk_i),
                               .probe0(rackctl_mon_ff),
                               .probe1(data_capture),
