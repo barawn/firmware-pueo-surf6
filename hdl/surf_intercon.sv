@@ -7,7 +7,7 @@ module surf_intercon(
         input rst_i,
         // Masters
         `TARGET_NAMED_PORTS_WB_IF( bm_ , 22, 32 ),
-        `TARGET_NAMED_PORTS_WB_IF( tc_ , 22, 32 ),
+        `TARGET_NAMED_PORTS_WB_IF( rack_ , 22, 32 ),
         // Slaves
         `HOST_NAMED_PORTS_WB_IF( surf_id_ctrl_ , 11, 32),
         `HOST_NAMED_PORTS_WB_IF( tio_ , 11, 32),
@@ -162,7 +162,7 @@ module surf_intercon(
     
     // Map masters
     `MASTER( bm_ , 0);
-    `MASTER( tc_ , 1);
+    `MASTER( rack_ , 1);
     // Map slaves
     `SLAVE_MAP( surf_id_ctrl_ , 0 , SURF_ID_CTRL_MASK, SURF_ID_CTRL_BASE );
     `SLAVE_MAP( tio_ , 1, TIO_MASK, TIO_BASE );
