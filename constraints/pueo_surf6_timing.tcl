@@ -38,10 +38,12 @@ proc set_gray_paths { srcClk dstClk ctlist } {
         return
     }
     array set ctypes $ctlist
+    set srcType $ctypes($srcClk)
+    set dstType $ctypes($dstClk)
     set maxTime [get_property PERIOD $srcClk]
     set maxSkew [expr min([get_property PERIOD $srcClk], [get_property PERIOD $dstClk])]
-    set srcRegs [get_cells -hier -filter "CUSTOM_GRAY_SRC == $ctypes($srcClk)"]
-    set dstRegs [get_cells -hier -filter "CUSTOM_GRAY_DST == $ctypes($dstClk)"]
+    set srcRegs [get_cells -hier -filter "CUSTOM_GRAY_SRC == $srcType"]
+    set dstRegs [get_cells -hier -filter "CUSTOM_GRAY_DST == $dstType"]
     if {[llength $srcRegs] == 0} {
         puts "set_gray_paths: No registers flagged with CUSTOM_GRAY_SRC $srcType: returning."
         return
@@ -64,8 +66,10 @@ proc set_ignore_paths { srcClk dstClk ctlist } {
         return
     }
     array set ctypes $ctlist
-    set srcRegs [get_cells -hier -filter "CUSTOM_IGN_SRC == $ctypes($srcClk)"]
-    set dstRegs [get_cells -hier -filter "CUSTOM_IGN_DST == $ctypes($dstClk)"]
+    set srcType $ctypes($srcClk)
+    set dstType $ctypes($dstClk)
+    set srcRegs [get_cells -hier -filter "CUSTOM_IGN_SRC == $srcType"]
+    set dstRegs [get_cells -hier -filter "CUSTOM_IGN_DST == $dstType"]
     if {[llength $srcRegs] == 0} {
         puts "set_ignore_paths: No registers flagged with CUSTOM_IGN_SRC $srcType: returning."
         return
@@ -77,6 +81,74 @@ proc set_ignore_paths { srcClk dstClk ctlist } {
     set_false_path -from $srcRegs -to $dstRegs
 }
 
+# The standard multicycle path calls don't actually use "set_multicycle_path" because
+# that whole procedure is dopestick annoying and often DOES NOT WORK if you're going
+# between domains that don't have an integer relationship.
+# Instead we just friggin' embed the min delay/max delays in UNITS OF THE SOURCE CLOCK.
+#
+# To have a destination be included in MULTIPLE tags you include them SEPARATED BY SPACES
+# you CANNOT HAVE A MULTICYCLE PATH with one source to multiple destinations in this syntax:
+# you have to break it up somewhere.
+#
+# TAGS HAVE TO JUST BE SIMPLE ALPHANUMERICS
+#
+# convenience function
+proc build_multicycle_re_dst { tag } {
+    # this works out to be "($tag)|($tag .*)|(.* $tag .*)|(.* $tag$)"
+    # it'd be awesome if I could figure out how to make a word boundary work,
+    # but I can't.
+    set RE_DST {"(}    
+    append RE_DST $tag
+    append RE_DST {)|(}
+    append RE_DST $tag
+    append RE_DST { .*)|(.* }
+    append RE_DST $tag
+    append RE_DST { .*)|(.* }
+    append RE_DST $tag
+    append RE_DST {$)"}
+    return $RE_DST
+}
+
+# note: the min/max delay attributes are set ONLY ON THE SOURCE REGISTER.
+# EXAMPLE
+# (* CUSTOM_MC_SRC_TAG = "ATOP_XFER", CUSTOM_MC_MIN = -2.5, CUSTOM_MC_MAX = 3.0 *)
+# reg atop = 0;
+# (* CUSTOM_MC_SRC_TAG = "BTOP_XFER", CUSTOM_MC_MIN = -3, CUSTOM_MC_MAX = 4.5 *)
+# reg btop = 0;
+# (* CUSTOM_MC_DST_TAG = "ATOP_XFER BTOP_XFER" *)
+# reg dest = 0;
+proc set_mc_paths { tag } {
+    set RE_DST [build_multicycle_re_dst $tag]
+    set srcRegs [get_cells -hier -filter "CUSTOM_MC_SRC_TAG == $tag"]
+    set dstRegs [get_cells -hier -regexp -filter "CUSTOM_MC_DST_TAG =~ $RE_DST"]
+    if {[llength $srcRegs] == 0} {
+        puts "set_mc_paths: No registers flagged with CUSTOM_MC_SRC_TAG $tag: returning."
+        return
+    }
+    if {[llength $dstRegs] == 0} {
+        puts "set_mc_paths: No registers flagged with CUSTOM_MC_DST_TAG $tag: returning."
+        return
+    }
+    set thisReg [lindex $srcRegs 0]
+    set srcClk [get_clocks -of_objects [get_cells $thisReg]]
+    set thisSourceClockPeriod [get_property PERIOD $srcClk]
+    set thisMin [get_property CUSTOM_MC_MIN [get_cells $thisReg]]
+    if {[llength $thisMin] == 0} {
+        puts "set_mc_paths: No minimum delay specified in tag $tag: returning."
+        return
+    }        
+    set thisMax [get_property CUSTOM_MC_MAX [get_cells $thisReg]]
+    if {[llength $thisMax] == 0} {
+        puts "set_mc_paths: No maximum delay specified in tag $tag: returning."
+        return
+    }        
+    set minTime [expr $thisMin*$thisSourceClockPeriod]
+    set maxTime [expr $thisMax*$thisSourceClockPeriod]
+    puts "set_mc_paths: $tag min $minTime max $maxTime"
+    set_min_delay -from $srcRegs -to $dstRegs $minTime
+    set_max_delay -from $srcRegs -to $dstRegs $maxTime
+}    
+        
 ######## END CONVENIENCE FUNCTIONS
 
 # PIN CLOCKS
@@ -92,14 +164,21 @@ set clktypes($sysclk) SYSREFCLK
 # If we want RXCLK/ACLK timed together, we need to compensate for the
 # difference in their clock network routing. Otherwise it tries to use
 # it to help.
-set rxclk [create_clock -period 8.00 -waveform { 0.9 4.9 } -name rxclk_clk [get_ports -filter { NAME =~ "RXCLK_P" && DIRECTION == "IN" }]]
-set clktypes($rxclk) RXCLK
+set rackclk [create_clock -period 8.00 -waveform { 0.9 4.9 } -name rackclk [get_ports -filter { NAME =~ "RXCLK_P" && DIRECTION == "IN" }]]
+set clktypes($rackclk) RACKCLK
 
-set gtpclk0 [create_clock -period 8.00 -name gtpclk0_clk [get_ports -filter { NAME =~ "B128_CLK_P[0]" && DIRECTION == "IN" }]]
-set clktypes($gtpclk0) GTPCLK0
+# there are 4 possible GTP clock inputs. Just define them all here. Only one ever gets used so we just name them GTPCLK.
+set gtpclk0 [create_clock -period 10.000 -name gtpclk0_clk [get_ports -filter { NAME =~ "B128_CLK_P[0]" && DIRECTION == "IN" }]]
+set clktypes($gtpclk0) GTPCLK
 
-set gtpclk1 [create_clock -period 8.00 -name gtpclk1_clk [get_ports -filter { NAME =~ "B128_CLK_P[1]" && DIRECTION == "IN" }]]
-set clktypes($gtpclk1) GTPCLK1
+set gtpclk1 [create_clock -period 10.000 -name gtpclk1_clk [get_ports -filter { NAME =~ "B128_CLK_P[1]" && DIRECTION == "IN" }]]
+set clktypes($gtpclk1) GTPCLK
+
+set gtpclk2 [create_clock -period 10.000 -name gtpclk2_clk [get_ports -filter { NAME =~ "B129_CLK_P[0]" && DIRECTION == "IN" }]]
+set clktypes($gtpclk2) GTPCLK
+
+set gtpclk3 [create_clock -period 10.000 -name gtpclk3_clk [get_ports -filter { NAME =~ "B129_CLK_P[1]" && DIRECTION == "IN" }]]
+set clktypes($gtpclk3) GTPCLK 
 
 # GENERATED CLOCKS
 
@@ -111,6 +190,9 @@ set clktypes($clk300) CLK300
 
 set psclk [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "ps_clk" }]]
 set clktypes($psclk) PSCLK
+
+set rxclk [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "rxclk" }]]
+set clktypes($rxclk) RXCLK
 
 # create clktypelist variable to save
 set clktypelist [array get clktypes]
@@ -163,8 +245,14 @@ set_cc_paths $clk300 $psclk $clktypelist
 set_cc_paths $psclk $rxclk $clktypelist
 set_cc_paths $rxclk $psclk $clktypelist
 
+set_cc_paths $psclk $rackclk $clktypelist
+set_cc_paths $rackclk $psclk $clktypelist
+
 set_cc_paths $psclk $ifclk $clktypelist
 
+# We also have some ignore paths in the RACKctl handling the gigantic tristate times
+# These are rackclk to rackclk
+set_ignore_paths $rackclk $rackclk $clktypelist
 
 # CLOCK ADJUSTMENTS
 # Xilinx doesn't have any way to properly adjust launch/capture clocks
@@ -181,6 +269,23 @@ lappend sync_tgt [get_cells -hier -filter { NAME =~ "u_syncgen/memclk_sync_reg"}
 set_max_delay -from $sync_src -to $sync_tgt 2.667
 set_min_delay -from $sync_src -to $sync_tgt -5.333 
 
+#############################################################
+##   SYNCHRONOUS CLOCK TRANSFER CONSTRAINTS
+#############################################################
+
+# these COULD be automagically found and run. maybe I'll do that at some point
+# these are described in the modules they're instantiated in.
+set_mc_paths ATOP_XFER
+set_mc_paths ABOT_XFER
+set_mc_paths BTOP_XFER
+set_mc_paths BBOT_XFER
+set_mc_paths CTOP_XFER
+set_mc_paths CBOT_XFER
+set_mc_paths URAM_RESET
+
+#################################################################
+
+
 # NOTE NOTE
 # THIS MEANS DEBUGGING ONLY WORKS IF PS IS RUNNING
 # guard against dumbassery
@@ -190,6 +295,9 @@ if {[llength $my_dbg_hub] > 0} {
    set_property C_ENABLE_CLK_DIVIDER false $my_dbg_hub
    set_property C_USER_SCAN_CHAIN 1 $my_dbg_hub
    connect_debug_port dbg_hub/clk ps_clk
+   # WTF IS THIS NEEDED FOR GOD DAMNIT
+   # ONLY FOR IBERT AND I NEED A BETTER WAY OF TESTING THIS
+   set_clock_groups -name async_ibert -asynchronous -group [get_clocks -include_generated_clocks gtpclk3_clk] -group $psclk
 } else {
    puts "skipping debug hub commands, not inserted yet"
 }
