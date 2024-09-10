@@ -8,7 +8,7 @@
     "parameters": {
       "component_parameters": {
         "Component_Name": [ { "value": "interphi_aurora", "resolve_type": "user", "usage": "all" } ],
-        "CHANNEL_ENABLE": [ { "value": "X0Y4 X0Y5 X0Y6 X0Y7", "resolve_type": "user", "usage": "all" } ],
+        "CHANNEL_ENABLE": [ { "value": "X0Y4 X0Y5 X0Y6 X0Y7", "value_src": "user", "resolve_type": "user", "usage": "all" } ],
         "C_GT_TYPE": [ { "value": "GTY", "resolve_type": "user", "usage": "all" } ],
         "C_active_transceiverquads": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "C_AURORA_LANES": [ { "value": "4", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
@@ -79,9 +79,9 @@
         "C_GT_LOC_7": [ { "value": "X", "resolve_type": "user", "usage": "all" } ],
         "C_GT_LOC_6": [ { "value": "X", "resolve_type": "user", "usage": "all" } ],
         "C_GT_LOC_5": [ { "value": "X", "resolve_type": "user", "usage": "all" } ],
-        "C_GT_LOC_4": [ { "value": "4", "resolve_type": "user", "enabled": false, "usage": "all" } ],
-        "C_GT_LOC_3": [ { "value": "3", "resolve_type": "user", "enabled": false, "usage": "all" } ],
-        "C_GT_LOC_2": [ { "value": "2", "resolve_type": "user", "enabled": false, "usage": "all" } ],
+        "C_GT_LOC_4": [ { "value": "4", "value_src": "user", "resolve_type": "user", "enabled": false, "usage": "all" } ],
+        "C_GT_LOC_3": [ { "value": "3", "value_src": "user", "resolve_type": "user", "enabled": false, "usage": "all" } ],
+        "C_GT_LOC_2": [ { "value": "2", "value_src": "user", "resolve_type": "user", "enabled": false, "usage": "all" } ],
         "C_GT_LOC_1": [ { "value": "1", "resolve_type": "user", "enabled": false, "usage": "all" } ],
         "C_GT_CLOCK_1": [ { "value": "GTYQ0", "resolve_type": "user", "usage": "all" } ],
         "C_GT_CLOCK_2": [ { "value": "None", "resolve_type": "user", "enabled": false, "usage": "all" } ],

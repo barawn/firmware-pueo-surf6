@@ -1,11 +1,16 @@
 ip/debug/align_ila/align_ila.xci
 ip/debug/boardman_ila/boardman_ila.xci
 ip/debug/cin_ila/cin_ila.xci
+ip/fifo/cmd_rxtx_fifo/cmd_rxtx_fifo.xci
 ip/debug/cobs_ila/cobs_ila.xci
+ip/uram/event_hdr_fifo/event_hdr_fifo.xci
 ip/clock/ifclk_pll/ifclk_pll.xci
 ip/debug/intercon_ila/intercon_ila.xci
 ip/interphi/interphi_aurora/interphi_aurora.xci
+ip/interphi/interphi_ibert/interphi_ibert.xci
+ip/interphi/interphi_ibert10/interphi_ibert10.xci
 ip/clock/memclk_pll/memclk_pll.xci
+ip/debug/rackctl_ila/rackctl_ila.xci
 ip/rf/rfdc_gen1/rfdc_gen1.xci
 ip/clock/sysclk_wiz/sysclk_wiz.xci
 ip/debug/turfio_cin_ila/turfio_cin_ila.xci
