@@ -70,16 +70,20 @@ module pueo_uram_v3_tb;
         end
     end
     
+    reg memclk_reset = 0;
+    reg ifclk_reset = 0;
+    
     reg aclk_reset = 0;
     reg [15:0] addr_tdata = {16{1'b0}};
     reg        addr_tvalid = 1'b0;
     wire       addr_tready;
     wire       begin_readout;
-    pueo_uram_v3 #(.SCRAMBLE_OPT("TRUE"))
+    pueo_uram_v4 #(.SCRAMBLE_OPT("TRUE"))
         uut(.aclk(aclk),
             .aclk_rst_i(aclk_reset),
             .aclk_sync_i(aclk_sync),
             .memclk(memclk),
+            .memclk_rst_i(memclk_reset),
             .memclk_sync_i(memclk_sync),
             .dat_i(data_vec),
             .begin_o(begin_readout),
@@ -89,13 +93,36 @@ module pueo_uram_v3_tb;
             .s_axis_tvalid(addr_tvalid),
             .s_axis_tready(addr_tready));   
     
-    // okay having only inputs is kinda hilarious
-    uram_event_buffer u_evbuf( .memclk_i(memclk),
+    wire [7:0]  ev_tdata;
+    wire        ev_tvalid;
+    wire        ev_tlast;
+    
+    reg [14:0] trig_time = {15{1'b0}};
+    reg [15:0] trig_num = {16{1'b0}};
+    reg        trig_valid = 0;
+    
+    reg [7:0]  fw_dat = {8{1'b0}};
+    reg        fw_load = 0;
+    reg        fw_wr = 0;
+    
+    uram_event_buffer_v3 u_evbuf( .memclk_i(memclk),
+                               .memclk_rst_i(memclk_reset),
                                .ifclk_i(syncclk),
-                               .ifclk_phase_i(syncclk_phase),
+                               .ifclk_rst_i(ifclk_reset),
                                .begin_i(begin_readout),
                                .dat_i(dout_vec),
-                               .dat_valid_i(dout_valid));
+                               .dat_valid_i(dout_valid),
+                               .trig_time_i(trig_time),
+                               .event_no_i(trig_num),
+                               .trig_valid_i(trig_valid),
+                               .dout_data_o(ev_tdata),
+                               .dout_data_valid_o(ev_tvalid),
+                               .dout_data_phase_i(syncclk_phase),
+                               .dout_data_last_o(ev_tlast),
+                               .fw_dat_i(fw_dat),
+                               .fw_load_i(fw_load),
+                               .fw_wr_i(fw_wr)
+                               );
 
     integer c,s;
     reg running = 0;
@@ -117,7 +144,36 @@ module pueo_uram_v3_tb;
         end
     end
     
+    task fw_write;
+        input [7:0] dat;
+        begin
+            @(posedge syncclk);
+            #1 fw_dat = dat;
+               fw_wr = 1;
+            @(posedge syncclk);
+            #1 fw_wr = 0;
+        end
+    endtask
+                
     initial begin
+        #500;
+        
+//        @(posedge syncclk);
+//        #1 fw_load = 1;
+//        #100;
+//        fw_write(8'h12);
+//        fw_write(8'h34);
+//        fw_write(8'h56);
+//        fw_write(8'h78);
+//        fw_write(8'h9A);
+//        fw_write(8'hBC);
+//        fw_write(8'hDE);
+//        fw_write(8'hF0);
+        
+//        #500;
+        
+        
+            
         #100;
         @(posedge aclk);
         #1 aclk_reset = 1;
@@ -130,7 +186,12 @@ module pueo_uram_v3_tb;
         addr_tvalid = 1'b1;
         @(posedge memclk);
         while (!addr_tready) @(posedge memclk);
-        #0.1 addr_tvalid = 1'b0;
+        #0.1 addr_tvalid = 1'b0;        
+        @(posedge memclk);
+        #0.1 trig_time = 55; trig_num = 1; trig_valid = 1;
+        @(posedge memclk);
+        #0.1 trig_valid = 0;
+        
     end
     
 endmodule
