@@ -1,9 +1,12 @@
+ip/fifo/addr_fifo/addr_fifo.xci
 ip/debug/align_ila/align_ila.xci
 ip/debug/boardman_ila/boardman_ila.xci
 ip/debug/cin_ila/cin_ila.xci
+ip/fifo/cmd_fifo/cmd_fifo.xci
 ip/fifo/cmd_rxtx_fifo/cmd_rxtx_fifo.xci
 ip/debug/cobs_ila/cobs_ila.xci
 ip/uram/event_hdr_fifo/event_hdr_fifo.xci
+ip/fifo/fw_fifo/fw_fifo.xci
 ip/clock/ifclk_pll/ifclk_pll.xci
 ip/debug/intercon_ila/intercon_ila.xci
 ip/interphi/interphi_aurora/interphi_aurora.xci
