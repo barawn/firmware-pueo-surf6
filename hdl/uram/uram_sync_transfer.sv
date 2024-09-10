@@ -42,17 +42,31 @@ module uram_sync_transfer #(
     
     localparam NSAMP_MEM = (NSAMP*3/4);
     
+    // CUSTOM_MC_SRC/DST is spec'd in SOURCE clocks and must tag on the SOURCE
     // first aclk buffer
+    
+    // atop: min -3*tick=-2 ns = -0.75, max 9*tick = 6 ns =2.25
+    (* CUSTOM_MC_SRC_TAG = "ATOP_XFER", CUSTOM_MC_MIN = "-0.75", CUSTOM_MC_MAX = "2.25" *)
     reg [NBIT*(NSAMP_A_TOP)-1:0] bufferA_top = {NBIT*NSAMP_A_TOP{1'b0}};
+    // abot: min -6*tick=4ns=1.5, max 6*tick = 4ns = 1.5
+    (* CUSTOM_MC_SRC_TAG = "ABOT_XFER", CUSTOM_MC_MIN = "-1.5", CUSTOM_MC_MAX = "1.5" *)
     reg [NBIT*(NSAMP_A_BOT)-1:0] bufferA_bot = {NBIT*NSAMP_A_BOT{1'b0}};
-    // second aclk buffer
+    // btop -1, 11: min -0.6667 ns = -0.25, max 11=7.333=2.75
+    (* CUSTOM_MC_SRC_TAG = "BTOP_XFER", CUSTOM_MC_MIN = "-0.25", CUSTOM_MC_MAX = "2.75" *)
     reg [NBIT*(NSAMP_B_TOP)-1:0] bufferB_top = {NBIT*NSAMP_B_TOP{1'b0}};
+    // bbot -4=-2.667 ns =-1, max 8 = 5.333 = 2
+    (* CUSTOM_MC_SRC_TAG = "BBOT_XFER", CUSTOM_MC_MIN = "-1", CUSTOM_MC_MAX = "2" *)
     reg [NBIT*(NSAMP_B_BOT)-1:0] bufferB_bot = {NBIT*NSAMP_B_BOT{1'b0}};
     // third aclk buffer
+    // ctop = -2 (-1.333 ns=-0.5), 10 (6.667=2.5)
+    (* CUSTOM_MC_SRC_TAG = "CTOP_XFER", CUSTOM_MC_MIN = "-0.5", CUSTOM_MC_MAX = "2.5" *)
     reg [NBIT*(NSAMP_C_TOP)-1:0] bufferC_top = {NBIT*NSAMP_C_TOP{1'b0}};
+    // cbot -5 (-3.333 ns = -1.25), 7 (4.667 ns = 1.75)
+    (* CUSTOM_MC_SRC_TAG = "CBOT_XFER", CUSTOM_MC_MIN = "-1.25", CUSTOM_MC_MAX = "1.75" *)
     reg [NBIT*(NSAMP_C_BOT)-1:0] bufferC_bot = {NBIT*NSAMP_C_BOT{1'b0}};
 
     // memclk buffer
+    (* CUSTOM_MC_DST_TAG = "ATOP_XFER ABOT_XFER BTOP_XFER BBOT_XFER CTOP_XFER CBOT_XFER" *)
     reg [NBIT*NSAMP_MEM-1:0] write_data = {NBIT*NSAMP_MEM{1'b0}};
     
     always @(posedge aclk_i) begin

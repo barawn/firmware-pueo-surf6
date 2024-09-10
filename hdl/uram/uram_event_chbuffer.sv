@@ -3,8 +3,27 @@
 // of the event readout stage. The generate
 // loop was getting too complicated and
 // there's still the readout logic to handle.
+//
+// SAMPLE_ORDER allows you to define how the nybbles are captured.
+// it labels the incoming samples as
+// sample 0: CBA
+// sample 1: FED
+// if we capture this FEDCBA, then the readout data looks like
+// BA, DC, FE
+// D0  D1  D2
+// which means
+// S[0] = D0 + ((D1) << 8) & 0xF00)
+// S[1] = ((D1>>4) & 0xF) + (D2 << 4)
+// we could also do (e.g.) FCEDBA, which would give us
+// BA, ED, FC which would allow for converting by
+// D0  D1  D2
+// S[0] = D0 + ((D2 << 8) & 0xF00)
+// S[1] = D1 + ((D2 << 4) & 0xF00)
+// obviously any other option works too
 module uram_event_chbuffer #(parameter RUN_DELAY=0,
-                             parameter CHANNEL_ORDER="FIRST")(
+                             parameter CHANNEL_ORDER="FIRST",
+                             parameter CR_CROSS="FALSE",
+                             parameter SAMPLE_ORDER="FEDCBA")(
         // write side. this is 1024x96 = 98,304 bits = 8192 x 12 samples
         // = 8 buf x 1024 samples/buf x 12 bits/sample
         input memclk_i,
@@ -40,6 +59,32 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
         input [35:0] cascade_in_i,
         output [35:0] cascade_out_o
     );
+
+    // this is how we make the output parameterizable
+    // 8'h41 is 'A'
+    localparam S0 = SAMPLE_ORDER[7:0] - 8'h41;
+    localparam S1 = SAMPLE_ORDER[15:8] - 8'h41;
+    localparam S2 = SAMPLE_ORDER[23:16] - 8'h41;
+    localparam S3 = SAMPLE_ORDER[31:24] - 8'h41;
+    localparam S4 = SAMPLE_ORDER[39:32] - 8'h41;
+    localparam S5 = SAMPLE_ORDER[47:40] - 8'h41;
+    function [23:0] map_output;
+        input [23:0] in_data;
+        input [7:0] idx0;
+        input [7:0] idx1;
+        input [7:0] idx2;
+        input [7:0] idx3;
+        input [7:0] idx4;
+        input [7:0] idx5;
+        begin
+            map_output[3:0] = in_data[4*idx0 +: 4];
+            map_output[7:4] = in_data[4*idx1 +: 4];
+            map_output[11:8] = in_data[4*idx2 +: 4];
+            map_output[15:12] = in_data[4*idx3 +: 4];
+            map_output[19:16] = in_data[4*idx4 +: 4];
+            map_output[23:20] = in_data[4*idx5 +: 4];
+        end
+    endfunction        
 
     localparam RESET_LADDR_DELAY = 1;
     // NOTE:
@@ -182,6 +227,10 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                              .capture_o(uaddr_capture));
 
     // WRITE-IN IS ALWAYS IN MEMCLK
+    // dat_i always has 3 chunks
+    wire [23:0] chunk0 = map_output(dat_i[0 +: 24], S0, S1, S2, S3, S4, S5);
+    wire [23:0] chunk1 = map_output(dat_i[24 +: 24], S0, S1, S2, S3, S4, S5);
+    wire [23:0] chunk2 = map_output(dat_i[48 +: 24], S0, S1, S2, S3, S4, S5);
     always @(posedge memclk_i) begin
         this_enable <= { this_enable[0], this_run };
     
@@ -200,23 +249,23 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
         // don't capture A0/1/2 in memclk_phase[2] to avoid
         // needing to increment address
         if (!memclk_phase[2])
-            bufA_in[0 +: 24] <= dat_i[0 +: 24];
+            bufA_in[0 +: 24] <= chunk0;
         // A3/B0/B1 mux their input data
         if (use_muxed_val) begin
-            bufA_in[24 +: 8] <= dat_i[48 +: 8];
-            bufB_in[0 +: 16] <= dat_i[56 +: 16];
+            bufA_in[24 +: 8] <= chunk2[0 +: 8];
+            bufB_in[0 +: 16] <= chunk2[8 +: 16];            
         end else begin
-            bufA_in[24 +: 8] <= dat_i[24 +: 8];
-            bufB_in[0 +: 16] <= dat_i[32 +: 16];            
+            bufA_in[24 +: 8] <= chunk1[0 +: 8];
+            bufB_in[0 +: 16] <= chunk1[8 +: 16];                        
         end
         // B2/B3/C0 do not
-        bufB_in[16 +: 16] <= dat_i[48 +: 16];
-        bufC_in[0 +: 8] <= dat_i[64 +: 8];
+        bufB_in[16 +: 16] <= chunk2[0 +: 16];
+        bufC_in[0 +: 8] <= chunk2[16 +: 8];
         // C1/C2/C3 also mux
         if (use_muxed_val)
-            bufC_in[8 +: 24] <= dat_i[24 +: 24];
+            bufC_in[8 +: 24] <= chunk1;
         else
-            bufC_in[8 +: 24] <= dat_i[0 +: 24];       
+            bufC_in[8 +: 24] <= chunk0;
     end
 
     // ACTUAL BRAMS ARE HERE
@@ -228,13 +277,13 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
     
     wire [31:0] bram_dout;
     
+    // because we're now in standard data cascade mode, *ALL* of the RAMs use their output regs
     RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
                .CASCADE_ORDER_B(CHANNEL_ORDER == "FIRST" ? "FIRST" : "MIDDLE"),
                .CLOCK_DOMAINS("INDEPENDENT"),
                // DOA is unimportant, so disable it
                .DOA_REG(1'b0),
-               // don't use DOB until the last BRAM
-               .DOB_REG(1'b0),
+               .DOB_REG(1'b1),
                // bram A port A doesn't need ADDREN
                .ENADDRENA("FALSE"),
                // port Bs never need ADDREN
@@ -262,7 +311,7 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .ADDRBWRADDR( this_bram_addr_B ),
                  .WEBWE( { {7{1'b0}}, bram_upd_wr_i[0] } ),
                  .ENBWREN( bram_en_i[0] ),
-                 .REGCEB( 1'b0 ),
+                 .REGCEB( bram_regce_i ),
                  .RSTRAMB( 1'b0 ),
                  
                  .CASOREGIMUXB(1'b0),
@@ -280,8 +329,8 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                .CLOCK_DOMAINS("INDEPENDENT"),
                // DOA is unimportant, so disable it
                .DOA_REG(1'b0),
-               // don't use DOB until the last BRAM
-               .DOB_REG(1'b0),
+               // all BRAMs use output regs
+               .DOB_REG(1'b1),
                // bram B port A doesn't need ADDREN
                .ENADDRENA("FALSE"),
                // port Bs never need ADDREN
@@ -308,7 +357,7 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .ADDRBWRADDR( this_bram_addr_B ),
                  .WEBWE( { {7{1'b0}}, bram_upd_wr_i[1] } ),
                  .ENBWREN( bram_en_i[1] ),
-                 .REGCEB( 1'b0 ),
+                 .REGCEB( bram_regce_i ),
                  .RSTRAMB( 1'b0 ),
                  
                  .CASOREGIMUXB(1'b0),
@@ -320,13 +369,24 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .CASDINPB( bramA_to_B[35:32] ),
                  .CASDOUTB( bramB_to_C[31:0] ),
                  .CASDOUTPB( bramB_to_C[35:32] ));
-
+    // son of a bitch, this doesn't work. it ALWAYS needs to be a straight cascade
+    // whatever, it managed to make it work.
+    // I'll change the uram_event_buffer to directly register the output anyway.
+//    wire casoregimuxb_bramC = (CHANNEL_ORDER == "LAST") ? bram_casdomux_i[2] : 1'b0;
+//    wire casoregimuxenb_bramC = (CHANNEL_ORDER == "LAST") ? bram_casdomuxen_i[2] : 1'b0;
+//    wire casdomuxb_bramC = (CHANNEL_ORDER == "LAST") ? 1'b0 : bram_casdomux_i[2];
+//    wire casdomuxenb_bramC = (CHANNEL_ORDER == "LAS") ? 1'b0 : bram_casdomuxen_i[2];
+    wire casoregimuxb_bramC = 1'b0;
+    wire casoregimuxenb_bramC = 1'b0;
+    wire casdomuxb_bramC = bram_casdomux_i[2];
+    wire casdomuxenb_bramC = bram_casdomuxen_i[2];
+        
     RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
                .CASCADE_ORDER_B(CHANNEL_ORDER == "LAST" ? "LAST" : "MIDDLE"),
                .CLOCK_DOMAINS("INDEPENDENT"),
                // DOA is unimportant, so disable it
                .DOA_REG(1'b0),
-               // bram C needs output register
+               // all BRAMs use output regs
                .DOB_REG(1'b1),
                // bram C port A needs ADDREN
                .ENADDRENA("TRUE"),
@@ -359,19 +419,17 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .ENBWREN( bram_en_i[2] ),
                  .REGCEB( bram_regce_i ),
                  .RSTRAMB( 1'b0 ),
-                 // bram C uses CASOREGIMUX
-                 // rather than CASDOMUX because
-                 // it registers before forwarding                 
-                 .CASOREGIMUXB(bram_casdomux_i[2]),
-                 .CASOREGIMUXEN_B(bram_casdomuxen_i[2]),
-                 .CASDOMUXB( 1'b0 ),
-                 .CASDOMUXEN_B( 1'b0 ),
+
+                 .CASOREGIMUXB(casoregimuxb_bramC),
+                 .CASOREGIMUXEN_B(casoregimuxenb_bramC),
+                 .CASDOMUXB( casdomuxb_bramC ),
+                 .CASDOMUXEN_B( casdomuxenb_bramC ),            
                  
                  .CASDINB( bramB_to_C[31:0] ),
                  .CASDINPB( bramB_to_C[35:32] ),
                  .CASDOUTB( cascade_out_o[31:0] ),
                  .CASDOUTPB( cascade_out_o[35:32] ));
-                 
+
     assign dat_o = bram_dout[7:0];            
 
     assign next_bram_uaddr_o = bram_uaddr;
