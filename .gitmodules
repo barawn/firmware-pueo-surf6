@@ -1,3 +1,6 @@
 [submodule "verilog-library-barawn"]
 	path = verilog-library-barawn
 	url = https://github.com/barawn/verilog-library-barawn/
+[submodule "firmware-pueo-common"]
+	path = firmware-pueo-common
+	url = https://github.com/barawn/firmware-pueo-common
