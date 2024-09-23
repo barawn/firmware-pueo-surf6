@@ -16,5 +16,7 @@ add_include_dir [file join [get_repo_dir] include]
 
 # set pre-synthesis scripts
 set_pre_synthesis_tcl [file join [get_repo_dir] pre_synthesis.tcl]
+set_post_route_tcl [file join [get_repo_dir] post_route.tcl]
+set_post_write_bitstream_tcl [file join [get_repo_dir] post_write_bitstream.tcl]
 
 check_all
