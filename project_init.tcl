@@ -8,6 +8,8 @@ proc get_repo_dir {} {
     return [ file join {*}$basedirlist ]
 }
 
+# grab the utility functions
+source [file join [get_repo_dir] project_utility.tcl]
 source [file join [get_repo_dir] verilog-library-barawn tclbits utility.tcl]
 source [file join [get_repo_dir] verilog-library-barawn tclbits repo_files.tcl]
 
