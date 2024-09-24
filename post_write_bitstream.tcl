@@ -30,7 +30,12 @@ set ltxfn [file join $build_dir $fullltxname]
 set fwufn [file join $build_dir $fullfwuname]
 
 file copy -force $origbit $bitfn
-file copy -force $origltx $ltxfn
+# check if it exists
+if { [file exists $origltx] } {
+    file copy -force $origltx $ltxfn
+} else {
+    puts "Skipping LTX copy since it doesn't exist."
+}
 
 set firstBramLoc [get_first_fwupdate_bramloc]
 set searchString [format "%s RAM=B:BIT0" $firstBramLoc]
