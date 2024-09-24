@@ -46,50 +46,13 @@ proc get_fwupdate_first_bram_idx { brams } {
 }
 
 # we need both bin2dec and dec2bin
-proc bin2dec bin {
-    if {$bin == 0} {
-        return 0 
-    } elseif  {[string match -* $bin]} {
-        set sign -
-        set bin [string range $bin 1 end]
-    } else {
-        set sign {}
-    }
-    if {[string map [list 1 {} 0 {}] $bin] ne {}} {
-        error "argument is not in base 2: $bin"
-    }
-    set r 0
-    foreach d [split $bin {}] {
-        incr r $r
-        incr r $d
-    }
-    return $sign$r
-}
-
-proc dump_fwupdate_bramlocs { fnprefix } {
+proc get_first_fwupdate_bramloc { } {
     set brams [get_chbuffer_brams]
     set firstBramIdx [get_fwupdate_first_bram_idx $brams]
-    # now that we know the first BRAM idx, we can rewrite the LUTs
-    set fwupdateBrams ""
-    for { set i $firstBramIdx } { $i < [expr $firstBramIdx + 12] } { incr i } {
-	lappend fwupdateBrams [lindex $brams $i]
-    }
-
-    set dna [get_cells -hier -filter { CUSTOM_DNA_VER != "" }]
-    set binver [get_property CUSTOM_DNA_VER $dna]
-    set decver [lindex [split $binver "b"] 1]
-    set hexver [format %8.8llx $decver]
-    set part [get_property part [current_design]]
-    set psfx [lindex [split $part "-"] 0]
-    append fnprefix $psfx "_" $hexver ".loc"
-    set lastdir [pwd]
-    cd [get_repo_dir]
-    set fp [open $fnprefix w]
-    foreach bram $fwupdateBrams {
-	puts $fp [get_property LOC $bram]
-    }
-    close $fp
-}
+    set firstBram [lindex $brams $firstBramIdx]
+    set firstBramLoc [get_property LOC $firstBram]
+    return $firstBramLoc
+}    
 
 proc update_fwupdate_luts { } {
     set brams [get_chbuffer_brams]
