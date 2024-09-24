@@ -1,15 +1,19 @@
-proc get_repo_dir {} {
+# search_repo_dir finds the repo dir so long as we were called ANYWHERE
+# in the project AND the project dir is called vivado_project
+proc search_repo_dir {} {
     set projdir [get_property DIRECTORY [current_project]]
-    set projdirlist [ file split $projdir ]
-    set basedirlist [ lreplace $projdirlist end end ]
+    set fullprojdir [file normalize $projdir]
+    set projdirlist [ file split $fullprojdir ]
+    set projindex [lsearch $projdirlist "vivado_project"]
+    set basedirlist [lrange $projdirlist 0 [expr $projindex - 1]]
     return [ file join {*}$basedirlist ]
 }
 
-source [file join [get_repo_dir] project_utility.tcl]
-source [file join [get_repo_dir] postprocess_fwupdate_bram.tcl]
+set projdir [search_repo_dir]
+source [file join $projdir project_utility.tcl]
+source [file join $projdir postprocess_fwupdate_bram.tcl]
 
 set curdir [pwd]
-set projdir [get_repo_dir]
 set verstring [pretty_version [get_built_project_version]]
 set topname [get_property TOP [current_design]]
 set origbit [format "%s.bit" $topname]
@@ -19,7 +23,7 @@ set fullbitname [format "%s_%s.bit" $topname $verstring]
 set fullltxname [format "%s_%s.ltx" $topname $verstring]
 set fullfwuname [format "%s_%s.fwu" $topname $verstring]
 
-set build_dir [file join [get_repo_dir] build]
+set build_dir [file join $projdir build]
 
 set bitfn [file join $build_dir $fullbitname]
 set ltxfn [file join $build_dir $fullltxname]
@@ -39,4 +43,6 @@ while {[gets $llfp line] != -1} {
 }
 close $llfp
 close $outfp
+
+cd $curdir
 

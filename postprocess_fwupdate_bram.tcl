@@ -32,15 +32,19 @@ proc chbuffer_lsort_comp { a b } {
 # find the first bram
 proc get_fwupdate_first_bram_idx { brams } {
     set firstBram ""
+    set firstBramLoc ""
     foreach bram $brams {
 	# only work until we find the first one
 	if { $firstBram == "" } {
-	    set yloc [lindex [split [get_property LOC $bram] "Y"] 1]
+	    set loc [get_property LOC $bram]
+	    set yloc [lindex [split $loc "Y"] 1]
 	    if { [expr { $yloc % 12 }] == 0 } {
 		set firstBram $bram
+		set firstBramLoc $loc
 	    }
 	}
     }
+    puts "using $firstBram at $loc as first BRAM"
     set firstBramIdx [get_property CUSTOM_BRAM_IDX $firstBram]
     return $firstBramIdx
 }
@@ -57,17 +61,15 @@ proc get_first_fwupdate_bramloc { } {
 proc update_fwupdate_luts { } {
     set brams [get_chbuffer_brams]
     set firstBramIdx [get_fwupdate_first_bram_idx $brams]
-    # once we know the first BRAM idx, we just start there,
-    # and pluck the LUTs by search
-    # The way the INITs work is that literally the bit corresponding
-    # to the value gets set. So you just want the binary representation
-    # of (1<<idx).
-    for { set i 0 } { $i < 12 } { incr i } {
-	set idxVal [expr $i + $firstBramIdx]
-	set filterStr [format "CUSTOM_BRAM_LUT_IDX == $idxVal"]
-	puts "searching for $filterStr"
-	set lut [get_cells -hier -filter $filterStr]
-	set hexInit [format %4.4llx [expr 1 << $i]]
+    set minIdx [ expr $firstBramIdx - 1 ]
+    set maxIdx [ expr $firstBramIdx + 12]
+    # fetch a truncated LUT list
+    set filterStr [format "CUSTOM_BRAM_LUT_IDX > $minIdx && CUSTOM_BRAM_LUT_IDX < $maxIdx"]
+    set fwupdateLuts [get_cells -hier -filter $filterStr]
+    foreach lut $fwupdateLuts {
+	set idx [get_property CUSTOM_BRAM_LUT_IDX $lut]
+	set fwupdateIdx [expr $idx - $firstBramIdx]
+	set hexInit [format %4.4llx [expr 1 << $fwupdateIdx]]
 	set initStr [format "16'h$hexInit"]
 	puts "setting $lut INIT val to $initStr"
 	set_property INIT $initStr $lut
