@@ -15,7 +15,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN1",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 4'd13,
+                    parameter [7:0] VER_REV = 8'd18,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -140,6 +140,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // 7: firmware loading mode
     wire [NUM_GPO-1:0] idctrl_gpo;
     
+    // bit 7: firmware loading complete
+    wire [NUM_GPO-1:0] idctrl_gpi;
+    assign idctrl_gpi[6:0] = {7{1'b0}};
+    wire firmware_pscomplete;
+    assign idctrl_gpi[7] = firmware_pscomplete;    
     wire firmware_loading = idctrl_gpo[7];
     generate
         if (REVISION == "B") begin : REVB
@@ -381,6 +386,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
 
     wire        pps;
 
+    wire        fw_mark;
     // this is the real real real command decoder now!
     pueo_command_decoder u_command_decoder(.sysclk_i(aclk),
                                            .command_i(turf_command),
@@ -397,6 +403,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            .cmdproc_tlast(cmdproc_tlast),
 
                                            `CONNECT_AXI4S_MIN_IF(fw_ , fw_ ),
+                                           .fw_mark_o(fw_mark),
                                            
                                            .trig_time_o(trigger_time),
                                            .trig_valid_o(trigger_time_valid));
@@ -508,6 +515,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire emio_sel;
     wire emio_wake;
     
+    wire emio_fwupdate;
+    wire emio_fwdone;
+    
     wire bm_tx;
     wire bm_rx;
 
@@ -546,16 +556,23 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // emio 1 is uart_sel
     // emio 2 is wake
     // emio 3 is clk_rst
+    // emio 8 is fw marked
+    // emio 9 is fw readout completed
     wire [15:0] emio_gpio_i;
     assign emio_gpio_i[1:0] = 2'b00;
     assign emio_gpio_i[2] = emio_wake;
     // HORSECRAP TO KEEP MEMCLK SYNC AROUND
     assign emio_gpio_i[3] = memclk_sync_rereg[1];
-    assign emio_gpio_i[15:4] = {13{1'b0}};
+    assign emio_gpio_i[7:4] = {4{1'b0}};
+    assign emio_gpio_i[8] = emio_fwupdate;
+    assign emio_gpio_i[15:9] = {7{1'b0}};
     
     wire [15:0] emio_gpio_o;
     wire [15:0] emio_gpio_t;
     assign emio_sel = emio_gpio_o[1] && !emio_gpio_t[1];    
+    
+    assign emio_fwdone = emio_gpio_o[9] && !emio_gpio_t[9];
+    
     // we want to make this easy so 1 is reset, 0 is OK
     // clk_rst_b feeds T, so 1 = OK, 0 = reset
     // we want clk_rst_b to be 1 if we're tristated OR if it's 0
@@ -616,6 +633,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
                         .fw_loading_i( firmware_loading ),
                         `CONNECT_AXI4S_MIN_IF( fw_ , fw_ ));
 
+    surf6_fwu_marker u_fwu_marker(.sysclk_i(aclk),
+                                  .fw_mark_i(fw_mark),
+                                  .fw_wr_i(fw_tvalid),
+                                  .wb_clk_i(wb_clk),
+                                  .fw_pscomplete_o(firmware_pscomplete),
+                                  .ps_fwupdate_gpo_o( emio_fwupdate ),
+                                  .ps_fwdone_gpi_i( emio_fwdone ));
             
 //    // RACKCTL RESET
 //    // The clock running monitors work like this:
