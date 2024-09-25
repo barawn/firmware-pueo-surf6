@@ -6,6 +6,7 @@ module surf_id_ctrl(
         input wb_rst_i,
         `TARGET_NAMED_PORTS_WB_IF( wb_ , 11, 32),
         
+        input [7:0] gpi_i,
         output [7:0] gpo_o,
         output [4:0] sync_offset_o,
         
@@ -26,6 +27,7 @@ module surf_id_ctrl(
     parameter [31:0] VERSION = {32{1'b0}};
     parameter WB_CLK_TYPE = "PSCLK";
     parameter NUM_GPO = 8;
+    parameter NUM_GPI = 8;
     
     parameter WB_ADR_BITS = 11;
     
@@ -34,11 +36,14 @@ module surf_id_ctrl(
     reg dna_read = 0;
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg [NUM_GPO-1:0] ctrlstat_gpo = {NUM_GPO{1'b0}};
+    (* CUSTOM_CC_DST = WB_CLK_TYPE *)
+    reg [NUM_GPI-1:0] ctrlstat_gpi = {NUM_GPI{1'b0}};
+    
     
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg [4:0] sync_offset = {5{1'b0}};
     
-    wire [31:0] ctrlstat_reg = { {11{1'b0}}, sync_offset, {(16-NUM_GPO){1'b0}}, ctrlstat_gpo };
+    wire [31:0] ctrlstat_reg = { {11{1'b0}}, sync_offset, ctrlstat_gpi, ctrlstat_gpo };
         
     wire sel_internal = (wb_adr_i[6 +: (WB_ADR_BITS-6)] == 0);
     wire [31:0] wishbone_registers[15:0];
@@ -129,6 +134,8 @@ module surf_id_ctrl(
         end
     endgenerate
     always @(posedge wb_clk_i) begin
+        ctrlstat_gpi <= gpi_i;
+    
         ack_internal <= (wb_cyc_i && wb_stb_i && sel_internal) && !ack_internal;
         if (sel_dna && ~wb_we_i && wb_ack_o) dna_shift <= 1;
         else dna_shift <= 0;
@@ -140,6 +147,10 @@ module surf_id_ctrl(
             if (wb_sel_i[2]) sync_offset <= wb_dat_i[16 +: 5];
         end
     end    
+    
+    // The custom attributes here allow us to extract information about the design at the
+    // implemented design level.
+    (* CUSTOM_DNA_VER = VERSION *)
     DNA_PORTE2 u_dina(.DIN(1'b0),.READ(dna_read),.SHIFT(dna_shift),.CLK(wb_clk_i),.DOUT(dna_data));
 
     wire [5:0] clk_running;
