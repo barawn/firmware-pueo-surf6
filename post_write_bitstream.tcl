@@ -14,7 +14,10 @@ source [file join $projdir project_utility.tcl]
 source [file join $projdir postprocess_fwupdate_bram.tcl]
 
 set curdir [pwd]
-set verstring [pretty_version [get_built_project_version]]
+set ver [get_built_project_version]
+puts "ver $ver"
+set verstring [pretty_version $ver]
+puts "verstring $verstring"
 set topname [get_property TOP [current_design]]
 set origbit [format "%s.bit" $topname]
 set origltx [format "%s.ltx" $topname]
@@ -30,12 +33,8 @@ set ltxfn [file join $build_dir $fullltxname]
 set fwufn [file join $build_dir $fullfwuname]
 
 file copy -force $origbit $bitfn
-# check if it exists
-if { [file exists $origltx] } {
-    file copy -force $origltx $ltxfn
-} else {
-    puts "Skipping LTX copy since it doesn't exist."
-}
+# we don't need to copy the debug probes file, we can just create it ourselves
+write_debug_probes -force $ltxfn
 
 set firstBramLoc [get_first_fwupdate_bramloc]
 set searchString [format "%s RAM=B:BIT0" $firstBramLoc]
