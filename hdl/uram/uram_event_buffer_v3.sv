@@ -449,6 +449,8 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
 //          end
     end
 
+    wire [6:0] fw_uaddr;
+    
     uram_event_readout_sm u_sm(.clk_i(ifclk_i),
                                .clk_ce_i(dout_data_phase_i),
                                .data_available_i(data_available),
@@ -461,6 +463,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
                                .sel_header_o(select_header_data),
                                .header_rd_o(header_data_read),
                                .valid_o(event_valid),
+                               .fw_update_uaddr_o(fw_uaddr),
                                .fw_loading_i(loading_fw[1]),
                                .fw_wr_i(fw_wr_i));
 
@@ -473,6 +476,9 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     generate
         genvar i;
         for (i=0;i<NCHAN;i=i+1) begin : CH
+            localparam LUTA_IDX = 3*i;
+            localparam LUTB_IDX = 3*i+1;
+            localparam LUTC_IDX = 3*i+2;
             // pick off the input data
             wire [71:0] this_channel_data = dat_i[NBIT_IN*i +: NBIT_IN];
             // ALL the input addresses are the same
@@ -481,9 +487,50 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
             // reading stuff
             wire [2:0] this_bram_casdomux = full_casdomux[3*i +: 3];
             wire [2:0] this_bram_casdomuxen = {3{bram_casdomuxen}};
-            wire [2:0] this_bram_en = active_chan[i] ? active_bram : 3'b000;
+            wire [2:0] this_bram_rden = active_chan[i] ? active_bram : 3'b000;
+            // fwupdate stuff. These can be registered because updates don't
+            // happen every clock.
+            (* KEEP = "TRUE", DONT_TOUCH = "TRUE" *)
+            reg [2:0] this_bram_wren = {3{1'b0}};
+            wire [2:0] this_bram_wren_decode;
+            // bram_raddr is 9 bits
+            // normally the bram_en and channel_en and read buffer fill out the rest
+            // each BRAM itself is 8x4096 = 12 bits
+            // we want to allow 12 of those so 4 more bits = 16 bits
+            // so the fwupdate crap outputs an additional 7 bits
+            // the bottom 3 bits fill in the read buffer
+            // then the next 4 bits above that select which one
+            // we embed these in a LUT, but we change the LUT INIT during postprocessing!
+            // NOTE NOTE NOTE NOTE NOTE:
+            // You HAVE TO SET THE DUMBASS INIT TO FFFF HERE
+            // THIS IS BECAUSE THE STUPID TIMING CRAP WILL *IGNORE* THIS PATH IF IT'S SET TO ZERO,
+            // WHICH MEANS EVERYTHING BREAKS!
+            // THIS ALSO MEANS WE NEED TO ZERO OUT THESE INITS IN THE POSTPROCESS
+            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTA_IDX *)
+            LUT4 #(.INIT(16'hFFFF)) u_brA_dec(.I0(fw_uaddr[3]),
+                                              .I1(fw_uaddr[4]),
+                                              .I2(fw_uaddr[5]),
+                                              .I3(fw_uaddr[6]),
+                                              .O(this_bram_wren_decode[0]));
+            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTB_IDX *)
+            LUT4 #(.INIT(16'hFFFF)) u_brB_dec(.I0(fw_uaddr[3]),
+                                              .I1(fw_uaddr[4]),
+                                              .I2(fw_uaddr[5]),
+                                              .I3(fw_uaddr[6]),
+                                              .O(this_bram_wren_decode[1]));
+            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTC_IDX *)
+            LUT4 #(.INIT(16'hFFFF)) u_brC_dec(.I0(fw_uaddr[3]),
+                                              .I1(fw_uaddr[4]),
+                                              .I2(fw_uaddr[5]),
+                                              .I3(fw_uaddr[6]),
+                                              .O(this_bram_wren_decode[2]));
+            always @(posedge ifclk_i) begin : WLGC
+                this_bram_wren <= this_bram_wren_decode;
+            end                
+                                              
+            wire [2:0] this_bram_en = (loading_fw[1]) ? this_bram_wren : this_bram_rden;
             wire this_bram_regce = !dout_data_phase_i;
-            wire [11:0] this_bram_raddr = { read_buffer, bram_raddr };
+            wire [11:0] this_bram_raddr = (loading_fw[1]) ? { fw_uaddr[2:0], bram_raddr} : { read_buffer, bram_raddr };
             wire [7:0] this_bram_dat_o;
             wire [7:0] this_bram_upd_dat = {8{1'b0}};
             wire this_bram_upd_wr = 1'b0;
@@ -499,7 +546,8 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
             // because they're ALL operating with no delay, the run delay can just be zero
             // next_bram_uaddr_o is then ignored.
             uram_event_chbuffer #(.RUN_DELAY(0),
-                                  .CHANNEL_ORDER(CHANNEL_ORDER))
+                                  .CHANNEL_ORDER(CHANNEL_ORDER),
+                                  .CHANNEL_INDEX(i))
                 u_chbuffer(.memclk_i(memclk_i),
                            .channel_run_i(running),
                            .bram_uaddr_i(this_bram_uaddr),
@@ -512,8 +560,8 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
                            .bram_en_i(this_bram_en),
                            .bram_raddr_i(this_bram_raddr),
                            .dat_o(this_bram_dat_o),
-                           .bram_upd_dat_i( (i==0) ? fw_dat_i : 8'h00),
-                           .bram_upd_wr_i( (i==0) ? {2'b00, fw_wr_i} : 3'b000 ),
+                           .bram_upd_dat_i( fw_dat_i ),
+                           .bram_upd_wr_i( {3{fw_wr_i}} ),
                            .bram_upd_casdimux_i( {3{1'b0}} ),
                            .cascade_in_i( cas_dinb[i] ),
                            .cascade_out_o(cas_doutb[i] ));

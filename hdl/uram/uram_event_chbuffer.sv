@@ -23,6 +23,7 @@
 module uram_event_chbuffer #(parameter RUN_DELAY=0,
                              parameter CHANNEL_ORDER="FIRST",
                              parameter CR_CROSS="FALSE",
+                             parameter CHANNEL_INDEX = 0,
                              parameter SAMPLE_ORDER="FEDCBA")(
         // write side. this is 1024x96 = 98,304 bits = 8192 x 12 samples
         // = 8 buf x 1024 samples/buf x 12 bits/sample
@@ -59,6 +60,10 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
         input [35:0] cascade_in_i,
         output [35:0] cascade_out_o
     );
+
+    localparam IDX_A = 3*CHANNEL_INDEX + 0;
+    localparam IDX_B = 3*CHANNEL_INDEX + 1;
+    localparam IDX_C = 3*CHANNEL_INDEX + 2;
 
     // this is how we make the output parameterizable
     // 8'h41 is 'A'
@@ -278,6 +283,7 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
     wire [31:0] bram_dout;
     
     // because we're now in standard data cascade mode, *ALL* of the RAMs use their output regs
+    (* CUSTOM_BRAM_IDX = IDX_A *)
     RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
                .CASCADE_ORDER_B(CHANNEL_ORDER == "FIRST" ? "FIRST" : "MIDDLE"),
                .CLOCK_DOMAINS("INDEPENDENT"),
@@ -324,6 +330,7 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .CASDOUTB( bramA_to_B[31:0] ),
                  .CASDOUTPB( bramA_to_B[35:32] ));
 
+    (* CUSTOM_BRAM_IDX = IDX_B *)
     RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
                .CASCADE_ORDER_B("MIDDLE"),
                .CLOCK_DOMAINS("INDEPENDENT"),
@@ -352,6 +359,7 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .WEA( bufB_bwe ),
                  .ENARDEN( this_enable[1] ),
                  .RSTRAMARSTRAM(1'b0),
+                 .DINBDIN( { {24{1'b0}}, bram_upd_dat_i } ),
                  
                  .CLKBWRCLK( ifclk_i ),
                  .ADDRBWRADDR( this_bram_addr_B ),
@@ -381,6 +389,7 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
     wire casdomuxb_bramC = bram_casdomux_i[2];
     wire casdomuxenb_bramC = bram_casdomuxen_i[2];
         
+    (* CUSTOM_BRAM_IDX = IDX_C *)
     RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
                .CASCADE_ORDER_B(CHANNEL_ORDER == "LAST" ? "LAST" : "MIDDLE"),
                .CLOCK_DOMAINS("INDEPENDENT"),
@@ -410,7 +419,7 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .WEA( bufC_bwe ),
                  .ENARDEN( this_enable[1] ),
                  .RSTRAMARSTRAM(1'b0),
-                 
+                 .DINBDIN( { {24{1'b0}}, bram_upd_dat_i } ),                 
                  .CLKBWRCLK( ifclk_i ),
                  .DOUTBDOUT( bram_dout ),
                  .ADDRBWRADDR( this_bram_addr_B ),

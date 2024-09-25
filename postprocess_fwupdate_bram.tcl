@@ -61,17 +61,27 @@ proc get_first_fwupdate_bramloc { } {
 proc update_fwupdate_luts { } {
     set brams [get_chbuffer_brams]
     set firstBramIdx [get_fwupdate_first_bram_idx $brams]
-    set minIdx [ expr $firstBramIdx - 1 ]
-    set maxIdx [ expr $firstBramIdx + 12]
-    # fetch a truncated LUT list
-    set filterStr [format "CUSTOM_BRAM_LUT_IDX > $minIdx && CUSTOM_BRAM_LUT_IDX < $maxIdx"]
-    set fwupdateLuts [get_cells -hier -filter $filterStr]
-    foreach lut $fwupdateLuts {
+    # sigh. we have to get them all.
+    set luts [get_cells -hier -filter { CUSTOM_BRAM_LUT_IDX != "" }]
+    foreach lut $luts {
 	set idx [get_property CUSTOM_BRAM_LUT_IDX $lut]
-	set fwupdateIdx [expr $idx - $firstBramIdx]
-	set hexInit [format %4.4llx [expr 1 << $fwupdateIdx]]
-	set initStr [format "16'h$hexInit"]
-	puts "setting $lut INIT val to $initStr"
-	set_property INIT $initStr $lut
+	if {idx < $firstBramIdx && idx > [expr $firstBramIdx + 11]} {
+	    # they start off as 16'hFFFF so the timer catches them all
+	    # we null out the ones we don't want.
+	    puts "setting $lut INIT val to 16'h0000"
+	    set_property INIT 16'h0000 $lut
+	} else {
+	    # now we sequentially hook up the ones we do want
+	    # as powers of 2 in the LUT
+	    # so fwupdateIdx = 0 is 0001 (responds to 0)
+	    #    fwupdateIdx = 1 is 0002 (responds to 1)
+	    #    ...
+	    #    fwupdateIdx = 11 is 0800 (responds to 12)
+	    set fwupdateIdx [expr $idx - $firstBramIdx]
+	    set hexInit [format %4.4llx [expr 1 << $fwupdateIdx]]
+	    set initStr [format "16'h$hexInit"]
+	    puts "setting $lut INIT val to $initStr"
+	    set_property INIT $initStr $lut
+	}
     }
 }

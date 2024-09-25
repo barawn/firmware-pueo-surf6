@@ -15,6 +15,7 @@ module uram_event_readout_sm(
         output header_rd_o,
         output valid_o,
         // add the firmware loading crap here
+        output [6:0] fw_update_uaddr_o,
         input fw_loading_i,
         input fw_wr_i
     );
@@ -77,6 +78,7 @@ module uram_event_readout_sm(
     reg [FSM_BITS-1:0] state = HEADER0;
 
     reg [6:0] bram_uaddr = {7{1'b0}};
+    reg [6:0] fw_update_uaddr = {7{1'b0}};
     reg [2:0] active_bram = {3{1'b0}};
     reg [7:0] active_chan = {8{1'b0}};
 
@@ -139,6 +141,10 @@ module uram_event_readout_sm(
         
         if (state == HEADER0) bram_uaddr <= {7{1'b0}};
         else if (advance_address) bram_uaddr <= bram_uaddr + 1;
+        
+        
+        if (!fw_loading_i) fw_update_uaddr <= {7{1'b0}};
+        else if (fw_loading_i && advance_address && (bram_addr_o == 9'h1FF)) fw_update_uaddr <= fw_update_uaddr + 1;
     end        
 
     // readout_complete goes high in DATA3 and stays there through DATA0.
@@ -153,4 +159,5 @@ module uram_event_readout_sm(
     assign sel_header_o = state[2];
     assign header_rd_o = (state == HEADER3) && clk_ce_i;    
     assign valid_o = valid;
+    assign fw_update_uaddr_o = fw_update_uaddr;
 endmodule
