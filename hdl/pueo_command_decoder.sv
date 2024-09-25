@@ -21,11 +21,16 @@ module pueo_command_decoder(
         output [7:0] fw_tdata,
         output       fw_tvalid,
         // NOTE NOTE NOTE THIS IS EFFING IGNORED
-        input        fw_tready,        
+        input        fw_tready,
+        // the mark output allows us to set the GPI to the CPU.
+        // it's sent inline with the data so nothing can race.
+        output       fw_mark_o,
         // trigger output
         output [14:0] trig_time_o,
         output        trig_valid_o
     );
+
+    parameter DEBUG = "TRUE";
 
     // We simplified the heck out of this.
     assign trig_valid_o = command_i[15] && command_valid_i;
@@ -42,6 +47,7 @@ module pueo_command_decoder(
     localparam [1:0] MODE1TYPE_LAST = 2'b11;
     localparam [1:0] MODE1TYPE_FW = 2'b11;
     localparam [7:0] MODE1SPECIAL_RESET = 8'h01;
+    localparam [7:0] MODE1SPECIAL_FW_MARK = 8'h02;
 
     reg mode1_rst = 0;
     reg [7:0] mode1_tdata = {8{1'b0}};
@@ -66,6 +72,8 @@ module pueo_command_decoder(
 
     reg pps = 0;
     
+    reg fw_mark = 0;
+    
     always @(posedge sysclk_i) begin
         // These are statically captured.
         if (message_valid) begin
@@ -80,7 +88,7 @@ module pueo_command_decoder(
         firmware_valid <= (mode1type == MODE1TYPE_FW) && message_valid;
         mode1_tvalid <= (mode1type == MODE1TYPE_NORMAL || mode1type == MODE1TYPE_LAST) && message_valid;
 
-        
+        fw_mark <= (mode1type == MODE1TYPE_SPECIAL) && (mode1data == MODE1SPECIAL_FW_MARK) && message_valid;        
     end
     assign cmdproc_tdata = mode1_tdata;
     assign cmdproc_tvalid = mode1_tvalid;
@@ -89,6 +97,7 @@ module pueo_command_decoder(
     
     assign fw_tdata = mode1_tdata;
     assign fw_tvalid = firmware_valid;
+    assign fw_mark_o = fw_mark;
     
     assign rundosync_o = run_do_sync;
     assign runrst_o = run_rst;
