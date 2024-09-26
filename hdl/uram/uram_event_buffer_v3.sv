@@ -502,24 +502,25 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
             // then the next 4 bits above that select which one
             // we embed these in a LUT, but we change the LUT INIT during postprocessing!
             // NOTE NOTE NOTE NOTE NOTE:
-            // You HAVE TO SET THE DUMBASS INIT TO FFFF HERE
+            // You HAVE TO SET THE DUMBASS INIT TO SOMETHING REAL HERE
             // THIS IS BECAUSE THE STUPID TIMING CRAP WILL *IGNORE* THIS PATH IF IT'S SET TO ZERO,
             // WHICH MEANS EVERYTHING BREAKS!
             // THIS ALSO MEANS WE NEED TO ZERO OUT THESE INITS IN THE POSTPROCESS
+            // 8000 CAN NEVER BE REACHED BY SOFTWARE SINCE IT'S ADDR[6:3] == 1111 WHICH IS TOO HIGH
             (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTA_IDX *)
-            LUT4 #(.INIT(16'hFFFF)) u_brA_dec(.I0(fw_uaddr[3]),
+            LUT4 #(.INIT(16'h8000)) u_brA_dec(.I0(fw_uaddr[3]),
                                               .I1(fw_uaddr[4]),
                                               .I2(fw_uaddr[5]),
                                               .I3(fw_uaddr[6]),
                                               .O(this_bram_wren_decode[0]));
             (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTB_IDX *)
-            LUT4 #(.INIT(16'hFFFF)) u_brB_dec(.I0(fw_uaddr[3]),
+            LUT4 #(.INIT(16'h8000)) u_brB_dec(.I0(fw_uaddr[3]),
                                               .I1(fw_uaddr[4]),
                                               .I2(fw_uaddr[5]),
                                               .I3(fw_uaddr[6]),
                                               .O(this_bram_wren_decode[1]));
             (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTC_IDX *)
-            LUT4 #(.INIT(16'hFFFF)) u_brC_dec(.I0(fw_uaddr[3]),
+            LUT4 #(.INIT(16'h8000)) u_brC_dec(.I0(fw_uaddr[3]),
                                               .I1(fw_uaddr[4]),
                                               .I2(fw_uaddr[5]),
                                               .I3(fw_uaddr[6]),
