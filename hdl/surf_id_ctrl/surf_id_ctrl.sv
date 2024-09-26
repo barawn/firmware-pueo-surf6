@@ -127,7 +127,7 @@ module surf_id_ctrl(
         for (gi=0;gi<(NUM_GPO/8);gi=gi+1) begin : GPO_BYTE
             localparam THIS_BYTE_BITS = (8*gi + 8 > NUM_GPO) ? (NUM_GPO-8*gi) : 8;
             always @(posedge wb_clk_i) begin : GPO_BYTE_LOGIC
-                if (wb_sel_i[gi]) begin
+                if (wb_sel_i[gi] && sel_ctrlstat) begin
                     ctrlstat_gpo[8*gi +: THIS_BYTE_BITS] <= wb_dat_i[8*gi +: THIS_BYTE_BITS];
                 end
             end
