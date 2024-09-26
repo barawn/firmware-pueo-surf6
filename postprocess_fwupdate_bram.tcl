@@ -65,7 +65,7 @@ proc update_fwupdate_luts { } {
     set luts [get_cells -hier -filter { CUSTOM_BRAM_LUT_IDX != "" }]
     foreach lut $luts {
 	set idx [get_property CUSTOM_BRAM_LUT_IDX $lut]
-	if {idx < $firstBramIdx && idx > [expr $firstBramIdx + 11]} {
+	if {$idx < $firstBramIdx || $idx > [expr $firstBramIdx + 11]} {
 	    # they start off as 16'hFFFF so the timer catches them all
 	    # we null out the ones we don't want.
 	    puts "setting $lut INIT val to 16'h0000"
