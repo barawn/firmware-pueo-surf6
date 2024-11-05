@@ -15,7 +15,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN1",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd19,
+                    parameter [7:0] VER_REV = 8'd33,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -44,6 +44,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
         // These are GPIOs (all nominal LEDs)
         output READY_B,         // B88_L8_N - D12
         output [1:0] FP_LED,    // B88_L8_P, B88_L10_P - E12, C14
+        output [3:0] DBG_LED,   // AD18, AF18, AH18, AJ18
         // THESE HAVE THE DUMBEST NAMES
         // IT'S CALLED CAL_SEL because it's a CALIBRATION SELECTION
         // IT'S CALLED SEL_CAL because you're SELECTING CALIBRATION
@@ -75,6 +76,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
         // J2.138 = B88_L9_P = D13
         inout B88_L9_P,     // D13 revA RX, revB TX
         inout B88_L9_N,     // C13 revA TX, revB RX
+        // Clock input. Right now I'm making this an input to us.
+        input CLK_SDO_SYNC, // pin 15 B65_L11P AJ16
         // B128 GTP clocks
         input [1:0] B128_CLK_P, // 0: M28, 1: K28
         input [1:0] B128_CLK_N, // 0: M29, 1: K29        
@@ -105,7 +108,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam INV_TXCLK = 1'b0;
 
     localparam [15:0] FIRMWARE_VERSION = { VER_MAJOR, VER_MINOR, VER_REV };
-    localparam [31:0] DATEVERSION = { FIRMWARE_DATE, FIRMWARE_VERSION };
+    localparam [31:0] DATEVERSION = { (REVISION=="B" ? 1'b1 : 1'b0),FIRMWARE_DATE[14:0], FIRMWARE_VERSION };
 
     localparam NUM_GPO = 8;
     
@@ -115,7 +118,6 @@ module pueo_surf6 #(parameter IDENT="SURF",
     (* KEEP = "TRUE" *)
     wire ps_clk;
     assign wb_clk = ps_clk;
-    
 
     // PIN REVISION HANDLING
     // 375 MHz system clock.
@@ -123,7 +125,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire aclk;
     // PL sysref
     wire pl_sysref;
-    // command tx data/tristate and command rx
+    // command tx input (from other SURF)/data/tristate and command rx
+    wire cmd_tx_i;
     wire cmd_tx_d;
     wire cmd_tx_t;
     wire cmd_rx;
@@ -139,21 +142,56 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // 6: disable MGTCLK (OE_MGTCLK inverted) - unused in revA
     // 7: firmware loading mode
     wire [NUM_GPO-1:0] idctrl_gpo;
-    
+
+    // this allows CLK_SDO_SYNC to be a sticky loss of lock detect
+    // 0x99:
+    //        SYNC_MUX_SEL[2:0] = 1xx
+    //        SYNC_OUTPUT_INV = 1
+    // = 128 | 8 = 0x88
+    // SYNC_INT_MUX is 0x141:
+    //      = 2 (PLL2 LOCK DETECT)
+    // = 2
+    // IOTEST_SYNC is 0x142
+    //      SYNC_OUTPUT_HIZ = 0
+    //      SYNC_ENB_INSTAGE = 1
+    // = 0x30 is fine
+    reg lol_sticky = 0;
+    reg [1:0] sdo_sync_rereg = 2'b00;
+    reg [4:0] sdo_counter = {5{1'b0}};
+    always @(posedge wb_clk) begin
+        sdo_sync_rereg <= { sdo_sync_rereg[0], CLK_SDO_SYNC };
+        if (idctrl_gpo[0]) lol_sticky <= 0;
+        else if (sdo_sync_rereg[1]) lol_sticky <= 1;        
+        
+        if (sdo_sync_rereg[0] ^ sdo_sync_rereg[1]) sdo_counter <= {5{1'b0}};
+        else sdo_counter <= sdo_counter + 1;
+    end
+
+    // just abuse this, whatever    
+    lock_ila u_lock_ila(.clk(wb_clk),
+                        .probe0(cmd_rx),
+                        .probe1(cmd_tx_t),
+                        .probe2(lol_sticky),
+                        .probe3(sdo_counter));
+        
     // bit 7: firmware loading complete
     wire [NUM_GPO-1:0] idctrl_gpi;
-    assign idctrl_gpi[6:0] = {7{1'b0}};
     wire firmware_pscomplete;
-    assign idctrl_gpi[7] = firmware_pscomplete;    
+    assign idctrl_gpi[7] = firmware_pscomplete;  
+    assign idctrl_gpi[6] = lol_sticky;  
     wire firmware_loading = idctrl_gpo[7];
+    wire clocks_ready = idctrl_gpo[0];
     generate
         if (REVISION == "B") begin : REVB
             // ACLK comes from SYSCLK_P/N, and has names inverted (but is correct b/c of inversion at clock)
-            IBUFDS u_aclk_ibuf(.I(SYSCLK_N),.IB(SYSCLK_P),.O(aclk_in));
+            IBUFDS_DIFF_OUT_IBUFDISABLE #(.SIM_DEVICE("ULTRASCALE"))
+                                        u_aclk_ibuf(.I(SYSCLK_N),.IB(SYSCLK_P),
+                                                    .IBUFDISABLE(~clocks_ready),
+                                                    .O(aclk_in));
             // PL_SYSREF comes from PL_SYSREF_P/N
             IBUFDS u_sysref_ibuf(.I(PL_SYSREF_P),.IB(PL_SYSREF_N),.O(pl_sysref));
             // cmd_tx goes to B88_L9_P
-            IOBUF u_cmdtx_obuf(.I(cmd_tx_d),.T(cmd_tx_t),.IO(B88_L9_P));
+            IOBUF u_cmdtx_obuf(.I(cmd_tx_d),.O(cmd_tx_i),.T(cmd_tx_t),.IO(B88_L9_P));
             // cmd_rx comes from B88_L9_N
             IOBUF u_cmdrx_ibuf(.IO(B88_L9_N),.T(1'b1),.I(1'b0),.O(cmd_rx));
             // handle clk reset
@@ -165,13 +203,20 @@ module pueo_surf6 #(parameter IDENT="SURF",
             IOBUF u_oe_mgtclk_obuf(.I(1'b0),.T(~idctrl_gpo[6]),.IO(B88_L5_N));
         end else begin : REVA
             // ACLK comes from SYSREFCLK_P/N
-            IBUFDS u_aclk_ibuf(.I(SYSREFCLK_P),.IB(SYSREFCLK_N),.O(aclk_in));
+            // We need to SUPPRESS aclk entirely until clocks_ready is asserted.
+            // It would nominally glitch on startup, but since we're handling
+            // the programming we can prevent that (we don't enable the outputs
+            // until the I/O is enabled).
+            IBUFDS_DIFF_OUT_IBUFDISABLE #(.SIM_DEVICE("ULTRASCALE"))
+                                        u_aclk_ibuf(.I(SYSREFCLK_P),.IB(SYSREFCLK_N),
+                                                    .IBUFDISABLE(~clocks_ready),
+                                                    .O(aclk_in));
             // PL_SYSREF comes from B88_L5_P
             IOBUF u_sysref_ibuf(.IO(B88_L5_P),.T(1'b1),.I(1'b0),.O(pl_sysref));
             // B88_L5_N is unused
             IOBUF u_unused_ibuf(.IO(B88_L5_N),.T(1'b1),.I(1'b0));
             // cmd_tx goes to B88_L9_N
-            IOBUF u_cmdtx_obuf(.I(cmd_tx_d),.T(cmd_tx_t),.IO(B88_L9_N));
+            IOBUF u_cmdtx_obuf(.I(cmd_tx_d),.O(cmd_tx_i),.T(cmd_tx_t),.IO(B88_L9_N));
             // cmd_rx comes from B88_L9_P
             IOBUF u_cmdrx_ibuf(.IO(B88_L9_P),.T(1'b1),.I(1'b0),.O(cmd_rx));
             // handle cal_sel
@@ -180,7 +225,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
         end
     endgenerate
 
-    OBUFT u_nready_obuf(.I(1'b0),.T(idctrl_gpo[0]),.O(READY_B));
+    // don't actually *use* this, but...
+    OBUFT u_nready_obuf(.I(1'b0),.T(~clocks_ready),.O(READY_B));
     assign FP_LED = idctrl_gpo[2:1];
     assign CAL_SEL_B = ~idctrl_gpo[3];
     assign SEL_CAL = idctrl_gpo[4];
@@ -270,8 +316,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
 
     // WISHBONE BUSSES
     // MASTERS
-    `DEFINE_WB_IF( bm_ , 22, 32 );    // serial
+    `DEFINE_WB_IF( bm_ , 22, 32 );    // serial (temporary)
     `DEFINE_WB_IF( rack_ , 22, 32 );  // RACK control
+    `DEFINE_WB_IF( spim_ , 22, 32 );
     // SLAVES
     // we have a 22-bit address space here, split up by 12 bits (1024 bytes, 256 32-bit regs)
     // we AUTOMATICALLY split it in 2 so that the UPPER address range directly goes to
@@ -294,6 +341,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     .rst_i(1'b0),
                     `CONNECT_WBS_IFM( bm_ , bm_ ),
                     `CONNECT_WBS_IFM( rack_ , rack_ ),
+                    `CONNECT_WBS_IFM( spim_ , spim_ ),
                     
                     `CONNECT_WBM_IFM( surf_id_ctrl_ , surf_id_ctrl_ ),
                     `CONNECT_WBM_IFM( tio_ , tio_ ),
@@ -425,6 +473,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire       dout_data_valid;
     wire       dout_data_phase;
 
+    localparam NUM_TURFIO_ERR = 1;
+    wire [NUM_TURFIO_ERR-1:0] turfio_err;
+    assign idctrl_gpi[0 +: NUM_TURFIO_ERR] = turfio_err;
+    
+    assign DBG_LED[0] = (|turfio_err) ? 1'b0 : 1'b1;
+    assign DBG_LED[3:1] = 3'b111;
+    
     turfio_wrapper #(.INV_CIN(INV_CIN),
                      .INV_COUT(INV_COUT),
                      .INV_DOUT(INV_DOUT),
@@ -463,6 +518,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                  .dout_data_valid_i(dout_data_valid),
                  .dout_data_phase_o(dout_data_phase),
                  
+                 .turfio_err_o(turfio_err),
+                 
                  .CIN_P(CIN_P),
                  .CIN_N(CIN_N),
                  .RXCLK_P(RXCLK_P),
@@ -486,8 +543,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
                   .rxclk_i(rxclk),
                   .rackclk_i(rackclk),
                   
+                  .gpi_i(idctrl_gpi),
                   .gpo_o(idctrl_gpo),
                   .sync_offset_o(sync_offset),
+                  .hsk_rx_i(cmd_rx),
+                  .hsk_tx_i(cmd_tx_i),
                   
                   .rxclk_ok_o(rxclk_ok),
                   .aclk_ok_o(aclk_ok),
@@ -520,19 +580,38 @@ module pueo_surf6 #(parameter IDENT="SURF",
     
     wire bm_tx;
     wire bm_rx;
-
-    // Handle the output from the boardman_wrapper    
-    assign emio_rx = (emio_sel) ? bm_tx : 1'b0;
-    // TX is open drain and inverted UART, w/pull at TURFIO
-    // so we drive only when emio_sel is low (no PS access)
-    // and bm_tx is high, producing a low.
-    // note that RX is standard uart polarity, deal with it
-    assign cmd_tx_d = 1'b0;
-    assign cmd_tx_t = ~bm_tx || emio_sel;
     
-    // handle the input to the boardman wrapper
-    // the flop here is b/c the EMIO is a transmitter, we're a receiver
-    assign bm_rx = (emio_sel) ? emio_tx : cmd_rx;
+    // OK - we'll still allow emio_sel to have the serial
+    // port become a WISHBONE bus, but now if it's *not*
+    // set, we redirect the RACK serial port to it.
+    // note: the RACK serial bus is inverted open drain
+    // note note: we might actually retime the UART both
+    // here and at the TURFIO to speed it up. Since it's
+    // negative logic and we'll idle high, we can watch
+    // for the first edge, and then stretch and delay
+    // the output to deal with the open-drain asymmetry.
+    // For this we just need to effectively measure the
+    // risetime of the signal, and then we can do:
+    // first edge -> wait risetime clocks before setting output low
+    // sample again at bit time clock repeatedly
+    // this should be pretty simple (just an accumulator really)
+    // and deals with the fact that for an open drain signal
+    // if we are trying to transmit 1010 and the bit period is 8
+    // it ends up looking closer to
+    //      /--- bit 0 here /--- bit 2 here
+    // 1111_00000000000000110000000000000011_1111111
+    //              \-- bit 1 here  \--- bit 3 here
+    // Here the rise time would be 6 clocks, so if we retime it, we have
+    // 1111111111_00000000111111110000000011111111_111111
+    // obviously you need to fudge a little on the risetime/bit period
+    assign emio_rx = (emio_sel) ? bm_tx : cmd_rx;
+    assign cmd_tx_d = 1'b0;
+    // emio_tx idles high, so we use it to drive cmd_tx_t automatically.
+    // the way UARTs work, the start bit is always 0, and the stop bit is always 1.
+    // the apparent risetime of the setup is around ~1 us, so if we retime
+    // at the TURFIO we can probably get 460,800 baud, but we'll see.
+    assign cmd_tx_t = (emio_sel) ? 1'b1 : emio_tx;
+    assign bm_rx = (emio_sel) ? emio_tx : 1'b0;    
 
     // NOTE: FOR INITIAL TESTING ONLY -
     // NEED TO CREATE A SWITCHING BAUD RATE THINGY
@@ -552,6 +631,26 @@ module pueo_surf6 #(parameter IDENT="SURF",
     always @(posedge memclk) begin
         memclk_sync_rereg <= { memclk_sync_rereg[0], memclk_sync };
     end
+    
+    // EMIO GARBAGE
+    // EMIO SPI DEFINES EVERY PIN AS TRISTATE BY DEFAULT (?!!)
+    // SO WE HANDLE THAT CRAP IN THE WRAPPER
+    wire spi_sclk;
+    wire spi_mosi;
+    wire spi_miso;
+    wire spi_cs_b;
+
+    // this will ultimately be our PL interface
+    wb_spi_master #(.WB_CLK_TYPE(WB_CLK_TYPE))
+        u_spim(.wb_clk_i(wb_clk),
+               .wb_rst_i(1'b0),
+               `CONNECT_WBM_IFM(wb_ , spim_),
+               // one day I'll name this consistently
+               .spi_cclk_i(spi_sclk),
+               .spi_mosi_i(spi_mosi),
+               .spi_miso_o(spi_miso),
+               .spi_cs_i(spi_cs_b));
+    
     // emio 0 is capture (legacy)
     // emio 1 is uart_sel
     // emio 2 is wake
@@ -561,8 +660,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire [15:0] emio_gpio_i;
     assign emio_gpio_i[1:0] = 2'b00;
     assign emio_gpio_i[2] = emio_wake;
-    // HORSECRAP TO KEEP MEMCLK SYNC AROUND
-    assign emio_gpio_i[3] = memclk_sync_rereg[1];
+    assign emio_gpio_i[3] = rackclk_ok;
     assign emio_gpio_i[7:4] = {4{1'b0}};
     assign emio_gpio_i[8] = emio_fwupdate;
     assign emio_gpio_i[15:9] = {7{1'b0}};
@@ -582,11 +680,17 @@ module pueo_surf6 #(parameter IDENT="SURF",
     
     zynq_bd_wrapper #(.REVISION(REVISION)) u_pswrap( .UART_1_0_rxd( emio_rx ),
                               .UART_1_0_txd( emio_tx ),
+                              .spi_mosi(spi_mosi),
+                              .spi_miso(spi_miso),
+                              .spi_sclk(spi_sclk),
+                              .spi_cs_b(spi_cs_b),
                               .GPIO_0_0_tri_i( emio_gpio_i ),
                               .GPIO_0_0_tri_o( emio_gpio_o ),
                               .GPIO_0_0_tri_t( emio_gpio_t ),
                               .pl_clk0_0(ps_clk));
 
+    
+    // still need these to monitor the UART path
     uart_vio u_vio(.clk(ps_clk),.probe_in0(emio_sel),.probe_out0(emio_wake));
     uart_ila u_ila(.clk(wb_clk),.probe0(bm_tx),.probe1(bm_rx));
 

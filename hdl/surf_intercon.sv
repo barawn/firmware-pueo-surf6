@@ -8,6 +8,7 @@ module surf_intercon(
         // Masters
         `TARGET_NAMED_PORTS_WB_IF( bm_ , 22, 32 ),
         `TARGET_NAMED_PORTS_WB_IF( rack_ , 22, 32 ),
+        `TARGET_NAMED_PORTS_WB_IF( spim_ , 22, 32 ),
         // Slaves
         `HOST_NAMED_PORTS_WB_IF( surf_id_ctrl_ , 11, 32),
         `HOST_NAMED_PORTS_WB_IF( tio_ , 11, 32),
@@ -51,7 +52,7 @@ module surf_intercon(
    localparam [21:0] RFDC_MASK = 22'h1FFFFF;   
     
     // START BOILERPLATE INTERCONNECT
-    localparam NUM_MASTERS = 2;
+    localparam NUM_MASTERS = 3;
     localparam NUM_SLAVES = 6;    
     localparam ADDR_WIDTH = 22;
     localparam DATA_WIDTH = 32;
@@ -163,6 +164,7 @@ module surf_intercon(
     // Map masters
     `MASTER( bm_ , 0);
     `MASTER( rack_ , 1);
+    `MASTER( spim_ , 2);
     // Map slaves
     `SLAVE_MAP( surf_id_ctrl_ , 0 , SURF_ID_CTRL_MASK, SURF_ID_CTRL_BASE );
     `SLAVE_MAP( tio_ , 1, TIO_MASK, TIO_BASE );

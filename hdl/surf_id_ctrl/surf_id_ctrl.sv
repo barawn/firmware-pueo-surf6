@@ -10,6 +10,11 @@ module surf_id_ctrl(
         output [7:0] gpo_o,
         output [4:0] sync_offset_o,
         
+        // data from TURFIO
+        input hsk_rx_i,
+        // data to TURFIO
+        input hsk_tx_i,
+        
         output aclk_ok_o,
         output rxclk_ok_o,
         output gtpclk_ok_o,
@@ -43,10 +48,21 @@ module surf_id_ctrl(
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg [4:0] sync_offset = {5{1'b0}};
     
-    wire [31:0] ctrlstat_reg = { {11{1'b0}}, sync_offset, ctrlstat_gpi, ctrlstat_gpo };
+    // top 8 bits are a global stat: top bit is TURFIO ready
+    wire [31:0] ctrlstat_reg = { rackclk_ok_o, {10{1'b0}}, sync_offset, ctrlstat_gpi, ctrlstat_gpo };
+    
+    // housekeeping packet count register
+    // packet counts are cleared by ANY logical zero on RX, and then
+    // increment whenever zeros have been seen for ~18 us or 
+    // greater on TX (this will include us, but who cares).
+    // as normal we sleaze this by using the overflow.
+    localparam [11:0] PACKET_TIMER_RESET_VAL = 12'd248;
+    reg [11:0] packet_timer_count = PACKET_TIMER_RESET_VAL;
+    reg [3:0] hsk_packet_count = {4{1'b0}};
         
     wire sel_internal = (wb_adr_i[6 +: (WB_ADR_BITS-6)] == 0);
     wire [31:0] wishbone_registers[15:0];
+        
     
         // Convenience stuff. These allow setting up wishbone registers easier.
 		// BASE needs to be defined to convert the base address into an index.
@@ -83,6 +99,7 @@ module surf_id_ctrl(
     `WISHBONE_ADDRESS( 12'h004, VERSION, OUTPUT, [31:0], 0);
     `WISHBONE_ADDRESS( 12'h008, { {31{1'b0}}, dna_data }, OUTPUTSELECT, sel_dna, 0);
     `WISHBONE_ADDRESS( 12'h00C, ctrlstat_reg, OUTPUTSELECT, sel_ctrlstat, 0);
+    `WISHBONE_ADDRESS( 12'h010, hsk_packet_count, OUTPUT, [31:0], 0);
     assign wishbone_registers[4] = wishbone_registers[0];
     assign wishbone_registers[5] = wishbone_registers[1];
     assign wishbone_registers[6] = wishbone_registers[2];
@@ -127,13 +144,19 @@ module surf_id_ctrl(
         for (gi=0;gi<(NUM_GPO/8);gi=gi+1) begin : GPO_BYTE
             localparam THIS_BYTE_BITS = (8*gi + 8 > NUM_GPO) ? (NUM_GPO-8*gi) : 8;
             always @(posedge wb_clk_i) begin : GPO_BYTE_LOGIC
-                if (wb_sel_i[gi] && sel_ctrlstat) begin
+                if (wb_we_i && wb_sel_i[gi] && sel_ctrlstat) begin
                     ctrlstat_gpo[8*gi +: THIS_BYTE_BITS] <= wb_dat_i[8*gi +: THIS_BYTE_BITS];
                 end
             end
         end
     endgenerate
     always @(posedge wb_clk_i) begin
+        if (hsk_tx_i) packet_timer_count <= PACKET_TIMER_RESET_VAL;
+        else packet_timer_count <= packet_timer_count[10:0] + 1;
+
+        if (!hsk_rx_i) hsk_packet_count <= {4{1'b0}};
+        else if (packet_timer_count[11]) hsk_packet_count <= hsk_packet_count + 1;
+    
         ctrlstat_gpi <= gpi_i;
     
         ack_internal <= (wb_cyc_i && wb_stb_i && sel_internal) && !ack_internal;
