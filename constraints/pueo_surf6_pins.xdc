@@ -52,5 +52,9 @@ set_property -dict { PACKAGE_PIN H29 } [get_ports { B129_CLK_N[0] }]
 set_property -dict { PACKAGE_PIN F28 } [get_ports { B129_CLK_P[1] }]
 set_property -dict { PACKAGE_PIN F29 } [get_ports { B129_CLK_N[1] }]
 
+set_property -dict { PACKAGE_PIN AJ18 IOSTANDARD LVCMOS18} [get_ports { DBG_LED[0] }]
+set_property -dict { PACKAGE_PIN AH18 IOSTANDARD LVCMOS18} [get_ports { DBG_LED[1] }]
+set_property -dict { PACKAGE_PIN AF18 IOSTANDARD LVCMOS18} [get_ports { DBG_LED[2] }]
+set_property -dict { PACKAGE_PIN AD18 IOSTANDARD LVCMOS18} [get_ports { DBG_LED[3] }]
 
-
+set_property -dict { PACKAGE_PIN AM14 IOSTANDARD LVCMOS18} [get_ports { CLK_SDO_SYNC }]
