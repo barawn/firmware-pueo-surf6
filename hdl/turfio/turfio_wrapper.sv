@@ -9,7 +9,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                         parameter INV_RXCLK = 1'b0,
                         parameter INV_TXCLK = 1'b0,
                         parameter INV_DOUT = 1'b0,
-                        parameter WB_CLK_TYPE = "PSCLK")(
+                        parameter WB_CLK_TYPE = "PSCLK",
+                        parameter NUM_ERR = 1)(
         input wb_clk_i,
         input wb_rst_i,
         `TARGET_NAMED_PORTS_WB_IF(wb_ , 11, 32),
@@ -49,6 +50,9 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         input [7:0] dout_data_i,
         input       dout_data_valid_i,
         output      dout_data_phase_o,
+        // feed this to a debug LED
+        // also needs to go to ctrlstat
+        output [NUM_ERR-1:0] turfio_err_o,
 
         input RXCLK_P,
         input RXCLK_N,
@@ -62,6 +66,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         output DOUT_P,
         output DOUT_N               
     );
+    (* CUSTOM_CC_SRC = "SYSREFCLK" *)
+    reg locked_alignment_err = 0;
 
     // let's test things
     reg aclk_toggle = 0;
@@ -107,6 +113,12 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     wire lock_status;
     
     wire [1:0] train_en;
+
+    // dear god I hope this never happens
+    always @(posedge aclk_i) begin
+        if (!lock_status) locked_alignment_err <= 1'b0;
+        else if (align_err) locked_alignment_err <= 1'b1;
+    end
 
     turfio_register_core #(.CAPTURE_DATA_WIDTH(32),
                            .WBCLKTYPE(WB_CLK_TYPE))
@@ -258,5 +270,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                .dout_data_phase_o(dout_data_phase_o),
                .DOUT_P(DOUT_P),
                .DOUT_N(DOUT_N));
+
+    assign turfio_err_o[0] = locked_alignment_err;
         
 endmodule
