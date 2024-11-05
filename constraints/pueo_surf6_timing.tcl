@@ -250,6 +250,11 @@ set_cc_paths $rackclk $psclk $clktypelist
 
 set_cc_paths $psclk $ifclk $clktypelist
 
+# just ignore the async removal crap
+set rackrst_src [get_cells -hier -filter { NAME =~ "u_id_ctrl/u_clkmon/clk_running_status_cdc2_reg[5]" }]
+set rackrst_dst [get_cells -hier -filter { NAME =~ "u_wb_rackctl/u_rackctl_rst" }]
+set_false_path -from $rackrst_src -to $rackrst_dst
+
 # We also have some ignore paths in the RACKctl handling the gigantic tristate times
 # These are rackclk to rackclk
 set_ignore_paths $rackclk $rackclk $clktypelist
