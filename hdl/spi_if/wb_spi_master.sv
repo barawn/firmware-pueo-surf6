@@ -18,7 +18,7 @@
 // note that for writes, MOSI will shift out the input data because that's the way the logic works
 `include "interfaces.vh"
 module wb_spi_master #(parameter WB_CLK_TYPE="NONE",
-                       parameter DEBUG = "TRUE")(
+                       parameter DEBUG = "FALSE")(
         input spi_cclk_i,
         input spi_mosi_i,
         input spi_cs_i,
