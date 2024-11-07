@@ -275,8 +275,14 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     (* CUSTOM_CC_DST = WBCLKTYPE *)
     reg [1:0] mmcm_locked = {2{1'b0}};
 
+    // these both START OUT in reset
+    // because they're pulled OUT of reset
+    // by the state machine once the incoming
+    // clock is active. This ensures that
+    // ACLK literally starts up 100% clean
+    // with absolutely zero glitches
     (* CUSTOM_CC_SRC = WBCLKTYPE *)
-    reg pll_reset = 0;
+    reg pll_reset = 1;
     (* CUSTOM_CC_DST = WBCLKTYPE *)
     reg [1:0] pll_locked = {2{1'b0}};
     (* CUSTOM_CC_DST = WBCLKTYPE *)
