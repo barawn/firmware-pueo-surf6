@@ -15,7 +15,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN1",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd33,
+                    parameter [7:0] VER_REV = 8'd34,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -186,7 +186,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
             // ACLK comes from SYSCLK_P/N, and has names inverted (but is correct b/c of inversion at clock)
             IBUFDS_DIFF_OUT_IBUFDISABLE #(.SIM_DEVICE("ULTRASCALE"))
                                         u_aclk_ibuf(.I(SYSCLK_N),.IB(SYSCLK_P),
-                                                    .IBUFDISABLE(~clocks_ready),
+                                                    .IBUFDISABLE(1'b0),
                                                     .O(aclk_in));
             // PL_SYSREF comes from PL_SYSREF_P/N
             IBUFDS u_sysref_ibuf(.I(PL_SYSREF_P),.IB(PL_SYSREF_N),.O(pl_sysref));
@@ -203,13 +203,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
             IOBUF u_oe_mgtclk_obuf(.I(1'b0),.T(~idctrl_gpo[6]),.IO(B88_L5_N));
         end else begin : REVA
             // ACLK comes from SYSREFCLK_P/N
-            // We need to SUPPRESS aclk entirely until clocks_ready is asserted.
-            // It would nominally glitch on startup, but since we're handling
-            // the programming we can prevent that (we don't enable the outputs
-            // until the I/O is enabled).
+            // We do NOT SUPPRESS ACLK at the input buffer! It's not glitch free
+            // that way!!!
+            // It is disabled at the BUFG and the PLLs are in reset until
+            // it's ready.
             IBUFDS_DIFF_OUT_IBUFDISABLE #(.SIM_DEVICE("ULTRASCALE"))
                                         u_aclk_ibuf(.I(SYSREFCLK_P),.IB(SYSREFCLK_N),
-                                                    .IBUFDISABLE(~clocks_ready),
+                                                    .IBUFDISABLE(1'b0),
                                                     .O(aclk_in));
             // PL_SYSREF comes from B88_L5_P
             IOBUF u_sysref_ibuf(.IO(B88_L5_P),.T(1'b1),.I(1'b0),.O(pl_sysref));
@@ -231,8 +231,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
     assign CAL_SEL_B = ~idctrl_gpo[3];
     assign SEL_CAL = idctrl_gpo[4];
     assign SEL_CAL_B = ~idctrl_gpo[4];
-
-    BUFG u_aclk_bufg(.I(aclk_in),.O(aclk));
+    (* CUSTOM_CC_DST = "SYSREFCLK" *)
+    BUFGCE #(.CE_TYPE("SYNC")) u_aclk_bufg(.I(aclk_in),.O(aclk),.CE(clocks_ready));
             
     // let's just try "reset until the goddamn thing lines up"
     wire aclk_reset;
