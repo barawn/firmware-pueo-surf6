@@ -20,6 +20,8 @@ module uram_event_readout_sm(
         input fw_wr_i
     );
     
+    reg fw_wr_stretch = 0;
+    
     // OK: HERE'S THE CORRECT READOUT SEQUENCE
     //
     // This is actually a lot simpler. Again to remember, we functionally have
@@ -89,8 +91,11 @@ module uram_event_readout_sm(
     // combine this with fw_loading_i
     wire activate_any_channel = data_available_i || fw_loading_i;
     // combine this with fw_wr_i 
-    wire advance_address = (state == DATA2 && active_bram[2] && clk_ce_i) || (fw_loading_i && fw_wr_i && clk_ce_i);
+    wire advance_address = (state == DATA2 && active_bram[2] && clk_ce_i) || (fw_loading_i && (fw_wr_i || fw_wr_stretch) && clk_ce_i);
     always @(posedge clk_i) begin
+        if (clk_ce_i) fw_wr_stretch <= 0;
+        else if (fw_wr_i) fw_wr_stretch <= 1;
+    
         if (clk_ce_i) begin
             case (state)
                 HEADER0: if (fw_loading_i) state <= FW0;
@@ -104,13 +109,13 @@ module uram_event_readout_sm(
                 DATA2: state <= DATA3;
                 DATA3: state <= DATA0;
                 FW0: if (!fw_loading_i) state <= HEADER0;
-                     else if (fw_wr_i) state <= FW1;
+                     else if (fw_wr_i || fw_wr_stretch) state <= FW1;
                 FW1: if (!fw_loading_i) state <= HEADER0;
-                     else if (fw_wr_i) state <= FW2;
+                     else if (fw_wr_i || fw_wr_stretch) state <= FW2;
                 FW2: if (!fw_loading_i) state <= HEADER0;
-                     else if (fw_wr_i) state <= FW3;
+                     else if (fw_wr_i || fw_wr_stretch) state <= FW3;
                 FW3: if (!fw_loading_i) state <= HEADER0;
-                     else if (fw_wr_i) state <= FW0;               
+                     else if (fw_wr_i || fw_wr_stretch) state <= FW0;               
             endcase
         end                        
         // valid

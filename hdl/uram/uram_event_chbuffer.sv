@@ -282,54 +282,58 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
     
     wire [31:0] bram_dout;
     
+    // THERE IS SO MUCH HACKERY GOING ON HERE
+    wire [2:0] casoregimuxb;
+    // TOTALLY FAKE
+    assign casoregimuxb = {3{1'b0}};
+    
     // because we're now in standard data cascade mode, *ALL* of the RAMs use their output regs
-    (* CUSTOM_BRAM_IDX = IDX_A *)
-    RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
-               .CASCADE_ORDER_B(CHANNEL_ORDER == "FIRST" ? "FIRST" : "MIDDLE"),
-               .CLOCK_DOMAINS("INDEPENDENT"),
-               // DOA is unimportant, so disable it
-               .DOA_REG(1'b0),
-               .DOB_REG(1'b1),
-               // bram A port A doesn't need ADDREN
-               .ENADDRENA("FALSE"),
-               // port Bs never need ADDREN
-               .ENADDRENB("FALSE"),
-               // don't bother with inits
-               // don't bother with RDADDRCHANGE
-               .READ_WIDTH_A(36),
-               .WRITE_WIDTH_A(36),
-               .READ_WIDTH_B(9),
-               .WRITE_WIDTH_B(9),
-               // don't bother with RSTREG_PRIORITY_A/B
-               // SLEEP is awkward so we won't use it at first but who knows
-               // don't bother with SRVAL_A/B or WRITE_MODE_A/B
-               .SLEEP_ASYNC("FALSE"))
-        u_bramA( .CLKARDCLK( memclk_i ),
-                 .DINADIN( bufA_in ),
-                 .DINPADINP( {4{1'b0}} ),
-                 .ADDRARDADDR( this_bram_addr_A ),
-                 .WEA( bufA_bwe ),
-                 .ENARDEN( this_enable[1] ),
-                 .RSTRAMARSTRAM(1'b0),
-                 
-                 .CLKBWRCLK( ifclk_i ),
-                 .DINBDIN( { {24{1'b0}}, bram_upd_dat_i } ),
-                 .ADDRBWRADDR( this_bram_addr_B ),
-                 .WEBWE( { {7{1'b0}}, bram_upd_wr_i[0] } ),
-                 .ENBWREN( bram_en_i[0] ),
-                 .REGCEB( bram_regce_i ),
-                 .RSTRAMB( 1'b0 ),
-                 
-                 .CASOREGIMUXB(1'b0),
-                 .CASOREGIMUXEN_B(1'b0),
-                 .CASDOMUXB( bram_casdomux_i[0] ),
-                 .CASDOMUXEN_B( bram_casdomuxen_i[0] ),
-                 
-                 .CASDINB( cascade_in_i[31:0] ),
-                 .CASDINPB( cascade_in_i[35:32] ),
-                 .CASDOUTB( bramA_to_B[31:0] ),
-                 .CASDOUTPB( bramA_to_B[35:32] ));
-
+(* CUSTOM_BRAM_IDX = IDX_A *)
+RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
+           .CASCADE_ORDER_B(CHANNEL_ORDER == "FIRST" ? "FIRST" : "MIDDLE"),
+           .CLOCK_DOMAINS("INDEPENDENT"),
+           // DOA is unimportant, so disable it
+           .DOA_REG(1'b0),
+           .DOB_REG(1'b1),
+           // bram A port A doesn't need ADDREN
+           .ENADDRENA("FALSE"),
+           // port Bs never need ADDREN
+           .ENADDRENB("FALSE"),
+           // don't bother with inits
+           // don't bother with RDADDRCHANGE
+           .READ_WIDTH_A(36),
+           .WRITE_WIDTH_A(36),
+           .READ_WIDTH_B(9),
+           .WRITE_WIDTH_B(9),
+           // don't bother with RSTREG_PRIORITY_A/B
+           // SLEEP is awkward so we won't use it at first but who knows
+           // don't bother with SRVAL_A/B or WRITE_MODE_A/B
+           .SLEEP_ASYNC("FALSE"))
+    u_bramA( .CLKARDCLK( memclk_i ),
+             .DINADIN( bufA_in ),
+             .DINPADINP( {4{1'b0}} ),
+             .ADDRARDADDR( this_bram_addr_A ),
+             .WEA( bufA_bwe ),
+             .ENARDEN( this_enable[1] ),
+             .RSTRAMARSTRAM(1'b0),
+             
+             .CLKBWRCLK( ifclk_i ),
+             .DINBDIN( { {24{1'b0}}, bram_upd_dat_i } ),
+             .ADDRBWRADDR( this_bram_addr_B ),
+             .WEBWE( { {7{1'b0}}, bram_upd_wr_i[0] } ),
+             .ENBWREN( bram_en_i[0] ),
+             .REGCEB( bram_regce_i ),
+             .RSTRAMB( 1'b0 ),
+             
+             .CASOREGIMUXB(casoregimuxb[0]),
+             .CASOREGIMUXEN_B(casoregimuxb[0]),
+             .CASDOMUXB( bram_casdomux_i[0] ),
+             .CASDOMUXEN_B( bram_casdomuxen_i[0] ),
+             
+             .CASDINB( cascade_in_i[31:0] ),
+             .CASDINPB( cascade_in_i[35:32] ),
+             .CASDOUTB( bramA_to_B[31:0] ),
+             .CASDOUTPB( bramA_to_B[35:32] ));
     (* CUSTOM_BRAM_IDX = IDX_B *)
     RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
                .CASCADE_ORDER_B("MIDDLE"),
@@ -368,8 +372,8 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .REGCEB( bram_regce_i ),
                  .RSTRAMB( 1'b0 ),
                  
-                 .CASOREGIMUXB(1'b0),
-                 .CASOREGIMUXEN_B(1'b0),
+                 .CASOREGIMUXB(casoregimuxb[1]),
+                 .CASOREGIMUXEN_B(casoregimuxb[1]),
                  .CASDOMUXB( bram_casdomux_i[1] ),
                  .CASDOMUXEN_B( bram_casdomuxen_i[1] ),
                  
@@ -429,8 +433,8 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
                  .REGCEB( bram_regce_i ),
                  .RSTRAMB( 1'b0 ),
 
-                 .CASOREGIMUXB(casoregimuxb_bramC),
-                 .CASOREGIMUXEN_B(casoregimuxenb_bramC),
+                 .CASOREGIMUXB(casoregimuxb[2]),
+                 .CASOREGIMUXEN_B(casoregimuxb[2]),
                  .CASDOMUXB( casdomuxb_bramC ),
                  .CASDOMUXEN_B( casdomuxenb_bramC ),            
                  

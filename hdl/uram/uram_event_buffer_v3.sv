@@ -472,6 +472,22 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     wire [35:0] cas_dinb[NCHAN-1:0];
 
     assign cas_dinb[0] = {36{1'b0}};        
+
+    // sigh, silly debugging.
+    // 24 bit enable
+    // 8 bit data
+    // 1 bit loading
+    // 1 bit wr
+    // 12 bit addr
+    wire [23:0] fw_bram_en;
+    wire [15:0] fw_addr = { fw_uaddr, bram_raddr };
+    
+    fwupd_ila u_fwupd_ila(.clk(ifclk_i),
+                          .probe0(fw_bram_en),
+                          .probe1(fw_dat_i),
+                          .probe2(loading_fw[1]),
+                          .probe3(fw_wr_i),
+                          .probe4(fw_addr));
     
     generate
         genvar i;
@@ -493,6 +509,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
             (* KEEP = "TRUE", DONT_TOUCH = "TRUE" *)
             reg [2:0] this_bram_wren = {3{1'b0}};
             wire [2:0] this_bram_wren_decode;
+            assign fw_bram_en[3*i +: 3] = this_bram_wren_decode;
             // bram_raddr is 9 bits
             // normally the bram_en and channel_en and read buffer fill out the rest
             // each BRAM itself is 8x4096 = 12 bits
