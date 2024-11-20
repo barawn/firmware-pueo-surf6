@@ -38,6 +38,10 @@ module pueo_command_decoder(
 
     // message stuff
     wire   message_valid = !command_i[31] && command_valid_i;
+    // used to stretch fw_valid being set. this makes
+    // fw_valid end up being exactly the same as an IFCLK domain
+    // signal (launch at 0, capture at 8 ns).
+    reg [1:0] message_valid_rereg = {2{1'b0}};
     
     // Mode1
     wire [1:0] mode1type = command_i[24 +: 2];
@@ -53,7 +57,6 @@ module pueo_command_decoder(
     reg [7:0] mode1_tdata = {8{1'b0}};
     reg mode1_tvalid = 0;
     reg mode1_tlast = 0;
-    // fw
     reg firmware_valid = 0;
     
     
@@ -75,6 +78,7 @@ module pueo_command_decoder(
     reg fw_mark = 0;
     
     always @(posedge sysclk_i) begin
+        message_valid_rereg <= {message_valid_rereg[0], message_valid};
         // These are statically captured.
         if (message_valid) begin
             mode1_tdata <= mode1data;
@@ -85,7 +89,10 @@ module pueo_command_decoder(
         run_rst <= (runcmd == RUNCMD_RESET) && message_valid;
         run_stop <= (runcmd == RUNCMD_STOP) && message_valid;
         mode1_rst <= (mode1type == MODE1TYPE_SPECIAL) && (mode1data == MODE1SPECIAL_RESET) && message_valid;
-        firmware_valid <= (mode1type == MODE1TYPE_FW) && message_valid;
+        // stretch firmware_valid. mode1_tdata is naturally stretched.
+        if (message_valid_rereg[1]) firmware_valid <= 1'b0;
+        else if (message_valid) firmware_valid <= (mode1type == MODE1TYPE_FW);
+
         mode1_tvalid <= (mode1type == MODE1TYPE_NORMAL || mode1type == MODE1TYPE_LAST) && message_valid;
 
         fw_mark <= (mode1type == MODE1TYPE_SPECIAL) && (mode1data == MODE1SPECIAL_FW_MARK) && message_valid;        
