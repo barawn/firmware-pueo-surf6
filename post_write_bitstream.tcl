@@ -33,6 +33,7 @@ set ltxfn [file join $build_dir $fullltxname]
 set fwufn [file join $build_dir $fullfwuname]
 
 file copy -force $origbit $bitfn
+
 # we don't need to copy the debug probes file, we can just create it ourselves
 write_debug_probes -force $ltxfn
 

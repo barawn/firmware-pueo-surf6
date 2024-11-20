@@ -17,7 +17,7 @@
 # That's our key - we associate that BRAM's LUT with addr 0, and then
 # continue upward.
 proc get_chbuffer_brams { } {
-    set brams [get_cells -hier -filter { CUSTOM_BRAM_IDX != "" }]
+    set brams [get_cells -hier -filter { CUSTOM_BRAM_IDX != "" }]    
     return [lsort -command chbuffer_lsort_comp $brams]
 }
 
@@ -62,7 +62,11 @@ proc update_fwupdate_luts { } {
     set brams [get_chbuffer_brams]
     set firstBramIdx [get_fwupdate_first_bram_idx $brams]
     # sigh. we have to get them all.
-    set luts [get_cells -hier -filter { CUSTOM_BRAM_LUT_IDX != "" }]
+    # DUMBASS XILINX BUG
+    # IF YOU DON'T EXPLICITLY ALLOW 0 IT WON'T WORK
+    # BUT ONLY FOR LUTS
+    # WHAT THE HELL
+    set luts [get_cells -hier -filter { CUSTOM_BRAM_LUT_IDX != "" || CUSTOM_BRAM_LUT_IDX == 0}]
     foreach lut $luts {
 	set idx [get_property CUSTOM_BRAM_LUT_IDX $lut]
 	if {$idx < $firstBramIdx || $idx > [expr $firstBramIdx + 11]} {
