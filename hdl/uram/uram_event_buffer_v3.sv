@@ -516,7 +516,14 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
             wire [2:0] this_bram_casdomuxen = {3{bram_casdomuxen}};
             wire [2:0] this_bram_rden = active_chan[i] ? active_bram : 3'b000;
             // fwupdate stuff. These can be registered because updates don't
-            // happen every clock.
+            // happen every clock: they happen at most every 8 clocks. so we
+            // have
+            // clk  fw_wr    uaddr[6:3] this_bram_wren
+            // 0    1        11         0
+            // 1    0        12         0
+            // 2    0        0          0
+            // 3..7 0        0          1
+            // 8    1        0          1
             // this is simple now
             reg [2:0] this_bram_wren = {3{1'b0}};
             assign fw_bram_en[3*i +: 3] = this_bram_wren;
