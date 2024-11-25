@@ -22,10 +22,8 @@ module surf6_mode1_monitor(
 
     reg mode1_ready = 0;
     
-    always @(posedge sysclk_i or rackclk_ok_i) begin
-        if (!rackclk_ok_i) mode1_ready <= 0;
-        else if (mode1rst_i) mode1_ready <= 1;
-    end
+    FDCE #(.INIT(1'b0),.IS_CLR_INVERTED(1'b1))
+        u_mode1_ready(.D(1'b1),.CE(mode1rst_i),.CLR(rackclk_ok_i),.C(sysclk_i));
 
     assign mode1_ready_o = mode1_ready;
 endmodule

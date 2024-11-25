@@ -15,7 +15,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN1",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd41,
+                    parameter [7:0] VER_REV = 8'd42,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -143,6 +143,12 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // 7: firmware loading mode
     wire [NUM_GPO-1:0] idctrl_gpo;
 
+    // this indicates that we've seen a MODE1_RST command
+    // since rackclk became OK: because MODE1_RST is sent
+    // after the TURFIO exits training, this is basically an
+    // "exiting training" indicator.    
+    wire mode1_ready;
+
     // this allows CLK_SDO_SYNC to be a sticky loss of lock detect
     // 0x99:
     //        SYNC_MUX_SEL[2:0] = 1xx
@@ -178,7 +184,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire [NUM_GPO-1:0] idctrl_gpi;
     wire [1:0] firmware_pscomplete;
     assign idctrl_gpi[7:6] = firmware_pscomplete;  
-    assign idctrl_gpi[5] = lol_sticky;  
+    assign idctrl_gpi[5] = lol_sticky;
+    assign idctrl_gpi[4] = mode1_ready;
+
     wire firmware_loading = idctrl_gpo[7];
     wire clocks_ready = idctrl_gpo[0];
     generate
@@ -750,6 +758,12 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                   .fw_pscomplete_o(firmware_pscomplete),
                                   .ps_fwupdate_gpo_o( emio_fwupdate ),
                                   .ps_fwdone_gpi_i( emio_fwdone ));
+
+    surf6_mode1_monitor u_mode1_monitor(.wb_clk_i(wb_clk),
+                                        .sysclk_i(aclk),
+                                        .rackclk_ok_i( rackclk_ok ),
+                                        .mode1rst_i( cmdproc_reset ),
+                                        .mode1_ready_o( mode1_ready ));
             
 //    // RACKCTL RESET
 //    // The clock running monitors work like this:
