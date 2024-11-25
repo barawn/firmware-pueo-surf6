@@ -15,11 +15,11 @@ module uram_event_readout_sm(
         output header_rd_o,
         output valid_o,
         // add the firmware loading crap here
-        output [6:0] fw_update_uaddr_o,
+        output [7:0] fw_update_uaddr_o,
         input fw_loading_i,
-        input fw_wr_i
+        input fw_wr_i,
+        output [1:0] fwmon_wr_o
     );
-    
     reg fw_wr_stretch = 0;
     
     // OK: HERE'S THE CORRECT READOUT SEQUENCE
@@ -80,7 +80,11 @@ module uram_event_readout_sm(
     reg [FSM_BITS-1:0] state = HEADER0;
 
     reg [6:0] bram_uaddr = {7{1'b0}};
-    reg [6:0] fw_update_uaddr = {7{1'b0}};
+    wire [7:0] bram_uaddr_next = bram_uaddr + 1;
+
+    reg [1:0] fwmon_wr = {2{1'b0}};
+    
+    
     reg [2:0] active_bram = {3{1'b0}};
     reg [7:0] active_chan = {8{1'b0}};
 
@@ -90,8 +94,12 @@ module uram_event_readout_sm(
     reg readout_complete = 0;
     // combine this with fw_loading_i
     wire activate_any_channel = data_available_i || fw_loading_i;
+    // part 1...
+    wire fw_advance_address = (fw_wr_i || fw_wr_stretch) && clk_ce_i;
+    // part 2. we use the carry-chain to as the 6 bit compare for bram_uaddr:
+    wire fw_uaddr_advance = fw_advance_address && (state[1:0] == 2'b11) && bram_uaddr_next[7];
     // combine this with fw_wr_i 
-    wire advance_address = (state == DATA2 && active_bram[2] && clk_ce_i) || (fw_loading_i && (fw_wr_i || fw_wr_stretch) && clk_ce_i);
+    wire advance_address = (state == DATA2 && active_bram[2] && clk_ce_i) || (fw_loading_i && fw_advance_address);    
     always @(posedge clk_i) begin
         if (clk_ce_i) fw_wr_stretch <= 0;
         else if (fw_wr_i) fw_wr_stretch <= 1;
@@ -145,12 +153,18 @@ module uram_event_readout_sm(
         if (clk_ce_i && state == DATA2 && active_bram[2])
         
         if (state == HEADER0) bram_uaddr <= {7{1'b0}};
-        else if (advance_address) bram_uaddr <= bram_uaddr + 1;
+        else if (advance_address) bram_uaddr <= bram_uaddr_next;
         
-        
-        if (!fw_loading_i) fw_update_uaddr <= {7{1'b0}};
-        else if (fw_loading_i && advance_address && (bram_addr_o == 9'h1FF)) fw_update_uaddr <= fw_update_uaddr + 1;
+        fwmon_wr[0] <= fw_wr_i && !fw_update_uaddr_o[7];
+        fwmon_wr[1] <= fw_wr_i && fw_update_uaddr_o[7];
     end        
+
+    // we moved the fwupd uaddr calc to its own module
+    // technically this MIGHT be simplify-able even more: who knows
+    fwupd_uaddr u_fwuaddr(.clk_i(clk_i),
+                          .ce_i(fw_uaddr_advance),
+                          .rstb_i(fw_loading_i),
+                          .uaddr_o(fw_update_uaddr_o));
 
     // readout_complete goes high in DATA3 and stays there through DATA0.
     // we need to make the output a flag, and do it early so that the read buffer
@@ -164,5 +178,6 @@ module uram_event_readout_sm(
     assign sel_header_o = state[2];
     assign header_rd_o = (state == HEADER3) && clk_ce_i;    
     assign valid_o = valid;
-    assign fw_update_uaddr_o = fw_update_uaddr;
+    assign fwmon_wr_o = fwmon_wr;
+    
 endmodule

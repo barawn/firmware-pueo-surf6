@@ -79,6 +79,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
         // fw update stuff
         input [7:0]  fw_dat_i,
         input        fw_wr_i,
+        output [1:0] fwmon_wr_o,
         // comes from idctrl
         input        fw_load_i,
         // output data. 
@@ -449,7 +450,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
 //          end
     end
 
-    wire [6:0] fw_uaddr;
+    wire [7:0] fw_uaddr;
     
     uram_event_readout_sm u_sm(.clk_i(ifclk_i),
                                .clk_ce_i(dout_data_phase_i),
@@ -465,7 +466,8 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
                                .valid_o(event_valid),
                                .fw_update_uaddr_o(fw_uaddr),
                                .fw_loading_i(loading_fw[1]),
-                               .fw_wr_i(fw_wr_i));
+                               .fw_wr_i(fw_wr_i),
+                               .fwmon_wr_o(fwmon_wr_o));
 
     // cascades
     wire [35:0] cas_doutb[NCHAN-1:0];
@@ -480,7 +482,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     // 1 bit wr
     // 12 bit addr
     wire [23:0] fw_bram_en;
-    wire [15:0] fw_addr = { fw_uaddr, bram_raddr };
+    wire [16:0] fw_addr = { fw_uaddr, bram_raddr };
     
     fwupd_ila u_fwupd_ila(.clk(ifclk_i),
                           .probe0(fw_bram_en),
@@ -492,9 +494,18 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     generate
         genvar i;
         for (i=0;i<NCHAN;i=i+1) begin : CH
+            // calling these LUTx_IDX is archaic but whatever
             localparam LUTA_IDX = 3*i;
             localparam LUTB_IDX = 3*i+1;
             localparam LUTC_IDX = 3*i+2;
+            
+            localparam [3:0] BRAMA_IN_BANK = (LUTA_IDX < 12) ? LUTA_IDX : (LUTA_IDX - 12);
+            localparam BRAMA_BANK = (LUTA_IDX < 12) ? 0 : 1;
+            localparam [3:0] BRAMB_IN_BANK = (LUTB_IDX < 12) ? LUTB_IDX : (LUTB_IDX - 12);
+            localparam BRAMB_BANK = (LUTB_IDX < 12) ? 0 : 1;
+            localparam [3:0] BRAMC_IN_BANK = (LUTC_IDX < 12) ? LUTC_IDX : (LUTC_IDX - 12);
+            localparam BRAMC_BANK = (LUTC_IDX < 12) ? 0 : 1;
+                       
             // pick off the input data
             wire [71:0] this_channel_data = dat_i[NBIT_IN*i +: NBIT_IN];
             // ALL the input addresses are the same
@@ -506,45 +517,33 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
             wire [2:0] this_bram_rden = active_chan[i] ? active_bram : 3'b000;
             // fwupdate stuff. These can be registered because updates don't
             // happen every clock.
-            (* KEEP = "TRUE", DONT_TOUCH = "TRUE" *)
+            // this is simple now
             reg [2:0] this_bram_wren = {3{1'b0}};
-            wire [2:0] this_bram_wren_decode;
-            assign fw_bram_en[3*i +: 3] = this_bram_wren_decode;
-            // bram_raddr is 9 bits
-            // normally the bram_en and channel_en and read buffer fill out the rest
-            // each BRAM itself is 8x4096 = 12 bits
-            // we want to allow 12 of those so 4 more bits = 16 bits
-            // so the fwupdate crap outputs an additional 7 bits
-            // the bottom 3 bits fill in the read buffer
-            // then the next 4 bits above that select which one
-            // we embed these in a LUT, but we change the LUT INIT during postprocessing!
-            // NOTE NOTE NOTE NOTE NOTE:
-            // You HAVE TO SET THE DUMBASS INIT TO SOMETHING REAL HERE
-            // THIS IS BECAUSE THE STUPID TIMING CRAP WILL *IGNORE* THIS PATH IF IT'S SET TO ZERO,
-            // WHICH MEANS EVERYTHING BREAKS!
-            // THIS ALSO MEANS WE NEED TO ZERO OUT THESE INITS IN THE POSTPROCESS
-            // 8000 CAN NEVER BE REACHED BY SOFTWARE SINCE IT'S ADDR[6:3] == 1111 WHICH IS TOO HIGH
-            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTA_IDX *)
-            LUT4 #(.INIT(16'h8000)) u_brA_dec(.I0(fw_uaddr[3]),
-                                              .I1(fw_uaddr[4]),
-                                              .I2(fw_uaddr[5]),
-                                              .I3(fw_uaddr[6]),
-                                              .O(this_bram_wren_decode[0]));
-            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTB_IDX *)
-            LUT4 #(.INIT(16'h8000)) u_brB_dec(.I0(fw_uaddr[3]),
-                                              .I1(fw_uaddr[4]),
-                                              .I2(fw_uaddr[5]),
-                                              .I3(fw_uaddr[6]),
-                                              .O(this_bram_wren_decode[1]));
-            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTC_IDX *)
-            LUT4 #(.INIT(16'h8000)) u_brC_dec(.I0(fw_uaddr[3]),
-                                              .I1(fw_uaddr[4]),
-                                              .I2(fw_uaddr[5]),
-                                              .I3(fw_uaddr[6]),
-                                              .O(this_bram_wren_decode[2]));
+            assign fw_bram_en[3*i +: 3] = this_bram_wren;
+// OLD STUFF                                    
+//            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTA_IDX *)
+//            LUT4 #(.INIT(16'h8000)) u_brA_dec(.I0(fw_uaddr[3]),
+//                                              .I1(fw_uaddr[4]),
+//                                              .I2(fw_uaddr[5]),
+//                                              .I3(fw_uaddr[6]),
+//                                              .O(this_bram_wren_decode[0]));
+//            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTB_IDX *)
+//            LUT4 #(.INIT(16'h8000)) u_brB_dec(.I0(fw_uaddr[3]),
+//                                              .I1(fw_uaddr[4]),
+//                                              .I2(fw_uaddr[5]),
+//                                              .I3(fw_uaddr[6]),
+//                                              .O(this_bram_wren_decode[1]));
+//            (* KEEP = "TRUE", DONT_TOUCH = "TRUE", CUSTOM_BRAM_LUT_IDX = LUTC_IDX *)
+//            LUT4 #(.INIT(16'h8000)) u_brC_dec(.I0(fw_uaddr[3]),
+//                                              .I1(fw_uaddr[4]),
+//                                              .I2(fw_uaddr[5]),
+//                                              .I3(fw_uaddr[6]),
+//                                              .O(this_bram_wren_decode[2]));
             always @(posedge ifclk_i) begin : WLGC
-                this_bram_wren <= this_bram_wren_decode;
-            end                
+                this_bram_wren[0] <= (fw_uaddr[6:3] == BRAMA_IN_BANK) && (fw_uaddr[7] == BRAMA_BANK);
+                this_bram_wren[1] <= (fw_uaddr[6:3] == BRAMB_IN_BANK) && (fw_uaddr[7] == BRAMB_BANK);
+                this_bram_wren[2] <= (fw_uaddr[6:3] == BRAMC_IN_BANK) && (fw_uaddr[7] == BRAMC_BANK);
+            end
                                               
             wire [2:0] this_bram_en = (loading_fw[1]) ? this_bram_wren : this_bram_rden;
             wire this_bram_regce = !dout_data_phase_i;

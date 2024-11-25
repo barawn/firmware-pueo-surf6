@@ -46,7 +46,9 @@ module pueo_wrapper #(parameter NBITS=12,
         // don't f$!(ing write if you're actually running
         input       fw_tvalid,
         // this is set to 1, hilariously
-        output      fw_tready
+        output      fw_tready,
+        // indicates when writes happen in banks
+        output [1:0] fwmon_wr_o
     );
     
     localparam MEMSAMP = NSAMP*3/4;
@@ -129,7 +131,8 @@ module pueo_wrapper #(parameter NBITS=12,
                                // skip dout_data_last_o right now
                                .fw_dat_i(fw_tdata),
                                .fw_load_i(fw_loading_i),
-                               .fw_wr_i(fw_tvalid)                               
+                               .fw_wr_i(fw_tvalid),
+                               .fwmon_wr_o(fwmon_wr_o) 
                                );
         
     assign fw_tready = 1'b1;    

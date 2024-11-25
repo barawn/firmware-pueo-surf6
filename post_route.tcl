@@ -12,6 +12,5 @@ proc search_repo_dir {} {
 set rdir [search_repo_dir]
 source [file join $rdir postprocess_fwupdate_bram.tcl]
 
-update_fwupdate_luts
-
-
+# don't do this at the moment: we don't have LUT stuff anymore.
+#update_fwupdate_luts

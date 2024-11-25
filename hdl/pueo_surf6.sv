@@ -15,7 +15,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN1",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd38,
+                    parameter [7:0] VER_REV = 8'd41,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -176,9 +176,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
         
     // bit 7: firmware loading complete
     wire [NUM_GPO-1:0] idctrl_gpi;
-    wire firmware_pscomplete;
-    assign idctrl_gpi[7] = firmware_pscomplete;  
-    assign idctrl_gpi[6] = lol_sticky;  
+    wire [1:0] firmware_pscomplete;
+    assign idctrl_gpi[7:6] = firmware_pscomplete;  
+    assign idctrl_gpi[5] = lol_sticky;  
     wire firmware_loading = idctrl_gpo[7];
     wire clocks_ready = idctrl_gpo[0];
     generate
@@ -575,8 +575,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire emio_sel;
     wire emio_wake;
     
-    wire emio_fwupdate;
-    wire emio_fwdone;
+    wire [1:0] emio_fwupdate;
+    wire [1:0] emio_fwdone;
     
     wire bm_tx;
     wire bm_rx;
@@ -651,33 +651,36 @@ module pueo_surf6 #(parameter IDENT="SURF",
                .spi_miso_o(spi_miso),
                .spi_cs_i(spi_cs_b));
     
-    // emio 0 is capture (legacy)
-    // emio 1 is uart_sel
-    // emio 2 is wake
-    // emio 3 is clk_rst
-    // emio 8 is fw marked
-    // emio 9 is fw readout completed
-    wire [15:0] emio_gpio_i;
-    assign emio_gpio_i[1:0] = 2'b00;
-    assign emio_gpio_i[2] = emio_wake;
-    assign emio_gpio_i[3] = rackclk_ok;
-    assign emio_gpio_i[7:4] = {4{1'b0}};
-    assign emio_gpio_i[8] = emio_fwupdate;
-    assign emio_gpio_i[15:9] = {7{1'b0}};
     
+    
+    wire [15:0] emio_gpio_i;
     wire [15:0] emio_gpio_o;
     wire [15:0] emio_gpio_t;
+
+    // emio 0 is capture (legacy)
+    // emio 1 is uart_sel (input)
+    // emio 2 is wake (output)
+    // emio 3 is clk_rst (input)
+    assign emio_gpio_i[1:0] = 2'b00;
+    assign emio_gpio_i[2] = emio_wake;
+    assign emio_gpio_i[3] = 1'b0;
     assign emio_sel = emio_gpio_o[1] && !emio_gpio_t[1];    
-    
-    assign emio_fwdone = emio_gpio_o[9] && !emio_gpio_t[9];
-    
-    // we want to make this easy so 1 is reset, 0 is OK
-    // clk_rst_b feeds T, so 1 = OK, 0 = reset
-    // we want clk_rst_b to be 1 if we're tristated OR if it's 0
-    // otherwise said as we want it to be 0 ONLY IF !emio_gpio_t[3] && emio_gpio_o[3]
-    // I think this reads easier than doing the actual logic.
     assign clk_rst_b = !emio_gpio_t[3] && emio_gpio_o[3] ? 0 : 1;
+
+    // emio 4-7 are open for now
+    assign emio_gpio_i[7:4] = {4{1'b0}};
     
+    // emio 9/8 is an interrupt (fwmarked[0]) (output)
+    assign emio_gpio_i[8] = emio_fwupdate[0];
+    assign emio_gpio_i[9] = emio_fwupdate[1];
+    // emio 10-11 are interrupts
+    assign emio_gpio_i[11:10] = {2{1'b0}};
+    
+    // emio 15-12 are inputs: 12 is fwdone[0]
+    assign emio_gpio_i[15:12] = {4{1'b0}};
+    assign emio_fwdone[0] = emio_gpio_o[12] && !emio_gpio_t[12];
+    assign emio_fwdone[1] = emio_gpio_o[13] && !emio_gpio_t[13];
+     
     zynq_bd_wrapper #(.REVISION(REVISION)) u_pswrap( .UART_1_0_rxd( emio_rx ),
                               .UART_1_0_txd( emio_tx ),
                               .spi_mosi(spi_mosi),
@@ -714,6 +717,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                          .RACKCTL_N(TXCLK_N));
 
     // ALL THE STUFF IN HERE
+    wire [1:0] firmware_bank_writes;
     pueo_wrapper u_pueo(.aclk_i(aclk),
                         .aclk_sync_i(aclk_phase),
                         .memclk_i(memclk),
@@ -735,11 +739,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
                         .dout_data_phase_i(dout_data_phase),
                         
                         .fw_loading_i( firmware_loading ),
+                        .fwmon_wr_o( firmware_bank_writes ),
                         `CONNECT_AXI4S_MIN_IF( fw_ , fw_ ));
 
     surf6_fwu_marker u_fwu_marker(.sysclk_i(aclk),
+                                  .ifclk_i( ifclk ),
                                   .fw_mark_i(fw_mark),
-                                  .fw_wr_i(fw_tvalid),
+                                  .fw_wr_i( firmware_bank_writes ),
                                   .wb_clk_i(wb_clk),
                                   .fw_pscomplete_o(firmware_pscomplete),
                                   .ps_fwupdate_gpo_o( emio_fwupdate ),
