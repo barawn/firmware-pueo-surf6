@@ -1,6 +1,9 @@
 `timescale 1ns / 1ps
 // I cannot figure out what's going on in the uram_event_buffer_v2, so
 // I'm abstracting the state machine out.
+// aaargh reworked AGAIN because we DO NOT want the stupid address
+// to automatically increment, we want it to happen when the marks
+// happen!
 module uram_event_readout_sm(
         input clk_i,
         input clk_ce_i,        
@@ -18,6 +21,7 @@ module uram_event_readout_sm(
         output [7:0] fw_update_uaddr_o,
         input fw_loading_i,
         input fw_wr_i,
+        input [1:0] fw_mark_i,
         output [1:0] fwmon_wr_o
     );
     reg fw_wr_stretch = 0;
@@ -161,6 +165,7 @@ module uram_event_readout_sm(
     // technically this MIGHT be simplify-able even more: who knows
     fwupd_uaddr u_fwuaddr(.clk_i(clk_i),
                           .ce_i(fw_uaddr_advance),
+                          .bank_ce_i(fw_mark_i),
                           .rstb_i(fw_loading_i),
                           .uaddr_o(fw_update_uaddr_o));
 

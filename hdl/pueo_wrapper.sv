@@ -47,6 +47,8 @@ module pueo_wrapper #(parameter NBITS=12,
         input       fw_tvalid,
         // this is set to 1, hilariously
         output      fw_tready,
+        // mark input
+        input [1:0] fw_mark_i,
         // indicates when writes happen in banks
         output [1:0] fwmon_wr_o
     );
@@ -114,6 +116,11 @@ module pueo_wrapper #(parameter NBITS=12,
             .s_axis_tdata(addr_tdata),
             .s_axis_tvalid(addr_tvalid),
             .s_axis_tready(addr_tready));   
+    wire [1:0] mark_ifclk;
+    flag_sync u_mark0(.in_clkA(fw_mark_i[0]),.out_clkB(mark_ifclk[0]),
+                      .clkA(aclk_i),.clkB(ifclk_i));
+    flag_sync u_mark1(.in_clkA(fw_mark_i[1]),.out_clkB(mark_ifclk[1]),
+                      .clkA(aclk_i),.clkB(ifclk_i));                      
     // OH DEAR GOD THIS IS AWKWARD!!
     uram_event_buffer_v3 u_evbuf( .memclk_i(memclk_i),
                                .memclk_rst_i(memclk_rst_memclk),
@@ -132,6 +139,7 @@ module pueo_wrapper #(parameter NBITS=12,
                                .fw_dat_i(fw_tdata),
                                .fw_load_i(fw_loading_i),
                                .fw_wr_i(fw_tvalid),
+                               .fw_mark_i(mark_ifclk),
                                .fwmon_wr_o(fwmon_wr_o) 
                                );
         

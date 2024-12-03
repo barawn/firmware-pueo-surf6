@@ -79,6 +79,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
         // fw update stuff
         input [7:0]  fw_dat_i,
         input        fw_wr_i,
+        input [1:0]  fw_mark_i,
         output [1:0] fwmon_wr_o,
         // comes from idctrl
         input        fw_load_i,
@@ -451,7 +452,6 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     end
 
     wire [7:0] fw_uaddr;
-    
     uram_event_readout_sm u_sm(.clk_i(ifclk_i),
                                .clk_ce_i(dout_data_phase_i),
                                .data_available_i(data_available),
@@ -467,6 +467,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
                                .fw_update_uaddr_o(fw_uaddr),
                                .fw_loading_i(loading_fw[1]),
                                .fw_wr_i(fw_wr_i),
+                               .fw_mark_i(fw_mark_i),
                                .fwmon_wr_o(fwmon_wr_o));
 
     // cascades

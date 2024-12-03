@@ -15,7 +15,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN1",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd43,
+                    parameter [7:0] VER_REV = 8'd45,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -747,6 +747,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                         .dout_data_phase_i(dout_data_phase),
                         
                         .fw_loading_i( firmware_loading ),
+                        .fw_mark_i( fw_mark ),
                         .fwmon_wr_o( firmware_bank_writes ),
                         `CONNECT_AXI4S_MIN_IF( fw_ , fw_ ));
 
