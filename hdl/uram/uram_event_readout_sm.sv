@@ -94,11 +94,11 @@ module uram_event_readout_sm(
     reg readout_complete = 0;
     // combine this with fw_loading_i
     wire activate_any_channel = data_available_i || fw_loading_i;
-    // part 1...
-    wire fw_advance_address = (fw_wr_i || fw_wr_stretch) && clk_ce_i;
+    // part 1: this indicates when we actually increment the address
+    wire fw_advance_address = (fw_wr_i || fw_wr_stretch) && clk_ce_i && (state[1:0] == 2'b11);
     // part 2. we use the carry-chain to as the 6 bit compare for bram_uaddr:
-    wire fw_uaddr_advance = fw_advance_address && (state[1:0] == 2'b11) && bram_uaddr_next[7];
-    // combine this with fw_wr_i 
+    wire fw_uaddr_advance = fw_advance_address && bram_uaddr_next[7];
+    // indicates when we advance uaddr
     wire advance_address = (state == DATA2 && active_bram[2] && clk_ce_i) || (fw_loading_i && fw_advance_address);    
     always @(posedge clk_i) begin
         if (clk_ce_i) fw_wr_stretch <= 0;
@@ -149,8 +149,6 @@ module uram_event_readout_sm(
         // active channel shift. we have to swap one clock earlier.
         if (state == HEADER0 && clk_ce_i) active_chan <= { {7{1'b0}}, activate_any_channel };
         else if (channel_complete && !clk_ce_i) active_chan <= { active_chan[6:0], 1'b0 };
-        
-        if (clk_ce_i && state == DATA2 && active_bram[2])
         
         if (state == HEADER0) bram_uaddr <= {7{1'b0}};
         else if (advance_address) bram_uaddr <= bram_uaddr_next;
