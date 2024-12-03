@@ -50,20 +50,31 @@ module surf6_fwu_marker(
     reg [1:0] firmware_block_marked = {2{1'b0}};
     reg [1:0] firmware_block_done = {2{1'b0}};
 
-    reg [2:0] ps_fwdone_wbclk = {2{1'b0}};
-    reg [2:0] ps_fwdone_sysclk = {2{1'b0}};
+    reg [2:0] ps_fwdone0_wbclk = {2{1'b0}};
+    reg [2:0] ps_fwdone1_wbclk = {2{1'b0}};
+    reg [2:0] ps_fwdone0_sysclk = {2{1'b0}};
+    reg [2:0] ps_fwdone1_sysclk = {2{1'b0}};
 
     always @(posedge sysclk_i) begin
-        ps_fwdone_sysclk <= { ps_fwdone_sysclk[1:0], ps_fwdone_gpi_i };
+        ps_fwdone0_sysclk <= { ps_fwdone0_sysclk[1:0], ps_fwdone_gpi_i[0] };
+        ps_fwdone1_sysclk <= { ps_fwdone1_sysclk[1:0], ps_fwdone_gpi_i[1] };
+                
+        if (fw_mark_i[0]) firmware_block_marked[0] <= 1;
+        else if (ps_fwdone0_sysclk[2:1] == 2'b01) firmware_block_marked[0] <= 0;        
         
-        if (fw_mark_i) firmware_block_marked <= 1;
-        else if (ps_fwdone_sysclk[2:1] == 2'b01) firmware_block_marked <= 0;        
+        if (fw_mark_i[1]) firmware_block_marked[1] <= 1;
+        else if (ps_fwdone1_sysclk[2:1] == 2'b01) firmware_block_marked[1] <= 0;
     end
     
     always @(posedge wb_clk_i) begin
-        ps_fwdone_wbclk <= { ps_fwdone_wbclk[1:0], ps_fwdone_gpi_i };
-        if (ps_fwdone_wbclk[2:1] == 2'b01) firmware_block_done <= 1;
-        else if (clear_pscomplete_wbclk) firmware_block_done <= 0;
+        ps_fwdone0_wbclk <= { ps_fwdone0_wbclk[1:0], ps_fwdone_gpi_i[0] };
+        ps_fwdone1_wbclk <= { ps_fwdone1_wbclk[1:0], ps_fwdone_gpi_i[1] };
+        
+        if (ps_fwdone0_wbclk[2:1] == 2'b01) firmware_block_done[0] <= 1;
+        else if (clear_pscomplete_wbclk[0]) firmware_block_done[0] <= 0;
+        
+        if (ps_fwdone1_wbclk[2:1] == 2'b01) firmware_block_done[1] <= 1;
+        else if (clear_pscomplete_wbclk[1]) firmware_block_done[1] <= 0;
     end
     
     assign fw_pscomplete_o = firmware_block_done;
