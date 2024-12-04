@@ -484,11 +484,11 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     // 12 bit addr
     wire [23:0] fw_bram_en;
     wire [16:0] fw_addr = { fw_uaddr, bram_raddr };
-    
+    wire fw_mark = |fw_mark_i;
     fwupd_ila u_fwupd_ila(.clk(ifclk_i),
                           .probe0(fw_bram_en),
                           .probe1(fw_dat_i),
-                          .probe2(loading_fw[1]),
+                          .probe2(fw_mark),
                           .probe3(fw_wr_i),
                           .probe4(fw_addr));
     

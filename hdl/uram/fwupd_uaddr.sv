@@ -16,7 +16,7 @@ module fwupd_uaddr(
         if (!rstb_i || (bank && bank_ce_i[1])) bank <= 0;
         else if (!bank && bank_ce_i[0]) bank <= 1;
         
-        if (!rstb_i) uaddr_reg <= {7{1'b0}};
+        if (!rstb_i || (|bank_ce_i)) uaddr_reg <= {7{1'b0}};
         else if (ce_i) uaddr_reg <= uaddr_reg + 1;
     end
     assign uaddr_o = { bank, uaddr_reg };

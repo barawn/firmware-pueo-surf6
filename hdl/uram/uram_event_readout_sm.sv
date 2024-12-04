@@ -103,10 +103,19 @@ module uram_event_readout_sm(
     // part 2. we use the carry-chain to as the 6 bit compare for bram_uaddr:
     wire fw_uaddr_advance = fw_advance_address && bram_uaddr_next[7];
     // indicates when we advance uaddr
-    wire advance_address = (state == DATA2 && active_bram[2] && clk_ce_i) || (fw_loading_i && fw_advance_address);    
+    wire advance_address = (state == DATA2 && active_bram[2] && clk_ce_i) || (fw_loading_i && fw_advance_address);   
+    
+    reg mark_reset = 0;
+    
+    // NOTE NOTE NOTE NOTE NOTE NOTE NOTE
+    // YOU ALWAYS HAVE TO TRANSFER AT LEAST 4 BYTES EACH TIME,
+    // YOU CAN'T DO 3 BYTES THEN MARK    
     always @(posedge clk_i) begin
         if (clk_ce_i) fw_wr_stretch <= 0;
         else if (fw_wr_i) fw_wr_stretch <= 1;
+
+        if (|fw_mark_i) mark_reset <= 1;
+        else if (clk_ce_i) mark_reset <= 0;
     
         if (clk_ce_i) begin
             case (state)
@@ -154,7 +163,7 @@ module uram_event_readout_sm(
         if (state == HEADER0 && clk_ce_i) active_chan <= { {7{1'b0}}, activate_any_channel };
         else if (channel_complete && !clk_ce_i) active_chan <= { active_chan[6:0], 1'b0 };
         
-        if (state == HEADER0) bram_uaddr <= {7{1'b0}};
+        if (state == HEADER0 || mark_reset) bram_uaddr <= {7{1'b0}};
         else if (advance_address) bram_uaddr <= bram_uaddr_next;
         
         fwmon_wr[0] <= fw_wr_i && !fw_update_uaddr_o[7];

@@ -15,7 +15,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN1",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd45,
+                    parameter [7:0] VER_REV = 8'd46,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -442,7 +442,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
 
     wire        pps;
 
-    wire        fw_mark;
+    wire [1:0]  fw_mark;
     // this is the real real real command decoder now!
     pueo_command_decoder u_command_decoder(.sysclk_i(aclk),
                                            .command_i(turf_command),
