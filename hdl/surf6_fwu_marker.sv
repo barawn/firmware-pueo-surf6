@@ -62,25 +62,30 @@ module surf6_fwu_marker(
     reg [1:0] firmware_block_marked = {2{1'b0}};
     reg [1:0] firmware_block_done = {2{1'b0}};
 
+    (* CUSTOM_CC_DST = "SYSREFCLK", ASYNC_REG = "TRUE" *)
+    reg fw_dlm_sync_sysclk = 0;
+    reg fw_downloadmode_sysclk = 0;
+    
     reg [2:0] ps_fwdone0_wbclk = {2{1'b0}};
     reg [2:0] ps_fwdone1_wbclk = {2{1'b0}};
+
     reg [2:0] ps_fwdone0_sysclk = {2{1'b0}};
     reg [2:0] ps_fwdone1_sysclk = {2{1'b0}};
+    
 
     always @(posedge sysclk_i) begin
+        fw_dlm_sync_sysclk <= fw_downloadmode_i;
+        fw_downloadmode_sysclk <= fw_dlm_sync_sysclk;
+        
         ps_fwdone0_sysclk <= { ps_fwdone0_sysclk[1:0], ps_fwdone_gpi_i[0] };
         ps_fwdone1_sysclk <= { ps_fwdone1_sysclk[1:0], ps_fwdone_gpi_i[1] };
                 
-        // The race here between firmware_block_marked going low
-        // and firmware_block_done going high isn't important because
-        // sysclk is faster than wbclk by a lot.
-        // So at worst the mark indicator will clear before the done indicator
-        // does, so you can't have "user sees done -> marks next block" before
-        // "firmware sees done -> clears mark"
-        if (fw_mark_i[0]) firmware_block_marked[0] <= 1;
+        if (!fw_downloadmode_sysclk) firmware_block_marked[0] <= 0;
+        else if (fw_mark_i[0]) firmware_block_marked[0] <= 1;
         else if (ps_fwdone0_sysclk[2:1] == 2'b01) firmware_block_marked[0] <= 0;        
         
-        if (fw_mark_i[1]) firmware_block_marked[1] <= 1;
+        if (!fw_downloadmode_sysclk) firmware_block_marked[1] <= 0;
+        else if (fw_mark_i[1]) firmware_block_marked[1] <= 1;
         else if (ps_fwdone1_sysclk[2:1] == 2'b01) firmware_block_marked[1] <= 0;
     end
     
