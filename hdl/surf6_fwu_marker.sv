@@ -3,6 +3,15 @@
 // also takes in gpi from PS and uses it to clear the gpo and mark completed.
 // also watches for a new write after the complete and kills the complete.
 // lot of stuff going on here!
+//
+// YET MORE updating!
+// The way this works NOW is to resolve a final race between the SURF
+// being put in eDownloadMode and pyfwupd starting up. So we plumb in
+// the download mode indicator (bit[7] from the ctrlstat reg): IF download
+// mode is NOT set, we CLEAR both pscompletes. ONCE download mode IS
+// set, pyfwupd starts up and AFTER IT OPENS THE INPUT FILE (so it won't
+// miss anything!) it toggles BOTH the fwdones high then low, which
+// sets the pscompletes. The pscompletes now look like "this bank is ready".
 module surf6_fwu_marker(
         // sysclk clockdomain
         input sysclk_i,
@@ -11,6 +20,7 @@ module surf6_fwu_marker(
         input [1:0] fw_wr_i,
         // WB clockdomain
         input wb_clk_i,
+        input fw_downloadmode_i,
         output [1:0] fw_pscomplete_o,
         // PS GP domain
         output [1:0] ps_fwupdate_gpo_o,
@@ -20,25 +30,27 @@ module surf6_fwu_marker(
     // we now have two half-buffers, A and B
     
     // software side:
+    // 0. start up and check if both pscomplete[1:0] are set (pyfwupd is running)
     // 1. write to A, and mark A
     // 2. write to B, and mark B
     // 3. check pscomplete[0], and if pscomplete[0], write A, and mark A
     // 4. check pscomplete[1], and if pscomplete[1], write B, and mark B
     // 5. go to step 3
     // PS side:
+    // 0. start up and set fwdone[1:0] and clear both
     // 1. wait for ps_fwupdate_gpo[0]
     // 2. readout A, set/clear fwdone[0]
     // 3. wait for ps_fwupdate_gpo[1]
     // 4. readout B, set/clear fwdone[1]
     // 5. go to step 1
     // firmware side:
-    // 1. mark A sets ps_fwupdate_gpo[0]
-    // 2. mark B sets ps_fwupdate_gpo[1]
-    // 3. fwdone[0] with ps_fwupdate_gpo[0] sets pscomplete[0]
-    // 4. fwdone[1] with ps_fwupdate_gpo[1] sets pscomplete[1]
-    // 5. fw_wr[0] is generated in uram_event_buffer -> clears pscomplete[0]
-    // 6. fw_wr[1] is generated in uram_event_buffer -> clears pscomplete[1]
-    
+    // 0. !download_i clears pscomplete[1:0]: when set, fwdone[1:0] set pscomplete[1:0]
+    // 1. fw_wr[0] is generated in uram_event_buffer -> clears pscomplete[0]
+    // 2. mark A sets ps_fwupdate_gpo[0]
+    // 3. fw_wr[1] is generated in uram_event_buffer -> clears pscomplete[1]
+    // 4. mark B sets ps_fwupdate_gpo[1]
+    // 5. fwdone[0] with ps_fwupdate_gpo[0] sets pscomplete[0]
+    // 6. fwdone[1] with ps_fwupdate_gpo[1] sets pscomplete[1]    
         
     wire [1:0] clear_pscomplete_wbclk;
     // these are in ifclk
@@ -59,6 +71,12 @@ module surf6_fwu_marker(
         ps_fwdone0_sysclk <= { ps_fwdone0_sysclk[1:0], ps_fwdone_gpi_i[0] };
         ps_fwdone1_sysclk <= { ps_fwdone1_sysclk[1:0], ps_fwdone_gpi_i[1] };
                 
+        // The race here between firmware_block_marked going low
+        // and firmware_block_done going high isn't important because
+        // sysclk is faster than wbclk by a lot.
+        // So at worst the mark indicator will clear before the done indicator
+        // does, so you can't have "user sees done -> marks next block" before
+        // "firmware sees done -> clears mark"
         if (fw_mark_i[0]) firmware_block_marked[0] <= 1;
         else if (ps_fwdone0_sysclk[2:1] == 2'b01) firmware_block_marked[0] <= 0;        
         
@@ -70,10 +88,14 @@ module surf6_fwu_marker(
         ps_fwdone0_wbclk <= { ps_fwdone0_wbclk[1:0], ps_fwdone_gpi_i[0] };
         ps_fwdone1_wbclk <= { ps_fwdone1_wbclk[1:0], ps_fwdone_gpi_i[1] };
         
-        if (ps_fwdone0_wbclk[2:1] == 2'b01) firmware_block_done[0] <= 1;
+        // calling this 'firmware block done' is misleading, it's actually
+        // 'firmware block is ready for new data'
+        if (!fw_downloadmode_i) firmware_block_done[0] <= 0;
+        else if (ps_fwdone0_wbclk[2:1] == 2'b01) firmware_block_done[0] <= 1;
         else if (clear_pscomplete_wbclk[0]) firmware_block_done[0] <= 0;
         
-        if (ps_fwdone1_wbclk[2:1] == 2'b01) firmware_block_done[1] <= 1;
+        if (!fw_downloadmode_i) firmware_block_done[1] <= 0;
+        else if (ps_fwdone1_wbclk[2:1] == 2'b01) firmware_block_done[1] <= 1;
         else if (clear_pscomplete_wbclk[1]) firmware_block_done[1] <= 0;
     end
     
