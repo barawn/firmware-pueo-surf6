@@ -15,7 +15,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN1",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd46,
+                    parameter [7:0] VER_REV = 8'd47,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -756,6 +756,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                   .fw_mark_i(fw_mark),
                                   .fw_wr_i( firmware_bank_writes ),
                                   .wb_clk_i(wb_clk),
+                                  .fw_downloadmode_i(firmware_loading),
                                   .fw_pscomplete_o(firmware_pscomplete),
                                   .ps_fwupdate_gpo_o( emio_fwupdate ),
                                   .ps_fwdone_gpi_i( emio_fwdone ));
