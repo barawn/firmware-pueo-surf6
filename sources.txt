@@ -54,3 +54,8 @@ hdl/uram/uram_event_readout_sm.sv
 hdl/uram/pueo_uram_v4.sv
 hdl/uram/uram_event_buffer_v3.sv
 hdl/surf6_fwu_marker.sv
+hdl/spi_if/wb_spi_master.sv
+hdl/surf6_mode1_monitor.sv
+hdl/uram/fwupd_uaddr.sv
+verilog-library-barawn/hdl/obuftds_autoinv.v
+hdl/turfio/turfio_cout.sv
