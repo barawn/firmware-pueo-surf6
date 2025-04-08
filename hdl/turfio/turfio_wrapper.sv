@@ -43,6 +43,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         // these are the parallelized CIN/COUT paths
         output [31:0] command_o,
         output command_valid_o,
+        // this is actually just the trigger
         input [31:0] response_i,
         input response_valid_i,
 
@@ -80,7 +81,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     end
     // what-freaking-ever
     //obufds_autoinv #(.INV(INV_TXCLK)) u_txclk(.I(1'b0),.O_P(TXCLK_P),.O_N(TXCLK_N));
-    obufds_autoinv #(.INV(INV_COUT)) u_cout(.I(1'b0),.O_P(COUT_P),.O_N(COUT_N));
+//    obufds_autoinv #(.INV(INV_COUT)) u_cout(.I(1'b0),.O_P(COUT_P),.O_N(COUT_N));
 //    obufds_autoinv #(.INV(INV_DOUT)) u_dout(.I(ifclk_out),.O_P(DOUT_P),.O_N(DOUT_N));    
 
 
@@ -270,6 +271,16 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                .dout_data_phase_o(dout_data_phase_o),
                .DOUT_P(DOUT_P),
                .DOUT_N(DOUT_N));
+               
+    turfio_cout #(.INV_COUT(INV_COUT))
+        u_cout(.ifclk_i(ifclk_i),
+               .ifclk_x2_i(ifclk_x2_i),
+               .ifclk_sync_i(ifclk_sync_i),
+               .train_i(train_en[0]),
+               .cout_data_i(response_i),
+               .cout_valid_i(response_valid_i),
+               .COUT_P(COUT_P),
+               .COUT_N(COUT_N));               
 
     assign turfio_err_o[0] = locked_alignment_err;
         

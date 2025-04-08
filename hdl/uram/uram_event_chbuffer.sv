@@ -288,7 +288,7 @@ module uram_event_chbuffer #(parameter RUN_DELAY=0,
     assign casoregimuxb = {3{1'b0}};
     
     // because we're now in standard data cascade mode, *ALL* of the RAMs use their output regs
-(* CUSTOM_BRAM_IDX = IDX_A *)
+(* CUSTOM_BRAM_IDX = IDX_A, CUSTOM_MC_DST_TAG = "FW_DATA FW_VALID" *)
 RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
            .CASCADE_ORDER_B(CHANNEL_ORDER == "FIRST" ? "FIRST" : "MIDDLE"),
            .CLOCK_DOMAINS("INDEPENDENT"),
@@ -334,7 +334,7 @@ RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
              .CASDINPB( cascade_in_i[35:32] ),
              .CASDOUTB( bramA_to_B[31:0] ),
              .CASDOUTPB( bramA_to_B[35:32] ));
-    (* CUSTOM_BRAM_IDX = IDX_B *)
+    (* CUSTOM_BRAM_IDX = IDX_B, CUSTOM_MC_DST_TAG = "FW_DATA FW_VALID"  *)
     RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
                .CASCADE_ORDER_B("MIDDLE"),
                .CLOCK_DOMAINS("INDEPENDENT"),
@@ -393,7 +393,7 @@ RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
     wire casdomuxb_bramC = bram_casdomux_i[2];
     wire casdomuxenb_bramC = bram_casdomuxen_i[2];
         
-    (* CUSTOM_BRAM_IDX = IDX_C *)
+    (* CUSTOM_BRAM_IDX = IDX_C, CUSTOM_MC_DST_TAG = "FW_DATA FW_VALID"  *)
     RAMB36E2 #(.CASCADE_ORDER_A("NONE"),
                .CASCADE_ORDER_B(CHANNEL_ORDER == "LAST" ? "LAST" : "MIDDLE"),
                .CLOCK_DOMAINS("INDEPENDENT"),

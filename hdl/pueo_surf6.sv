@@ -10,12 +10,13 @@
 // But CLK8_P/N stays unused in revB (and L13_N/P were unused in revA)
 // so we just manage it with a parameter.
 // There *are* differences for the PS so that has to be handled separately.
+// `define USE_INTERPHI
 module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
-                    parameter DEVICE="GEN1",
+                    parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd48,
+                    parameter [7:0] VER_REV = 8'd51,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -88,19 +89,24 @@ module pueo_surf6 #(parameter IDENT="SURF",
         input DAC_CLK_N,
         output DAC_OUT_P,
         output DAC_OUT_N,
-        input [3:0] ADC_CLK_P,
-        input [3:0] ADC_CLK_N,
-        input [7:0] ADC_IN_P,
-        input [7:0] ADC_IN_N,
-        
+        `ifdef USE_INTERPHI
         input [7:0] INTERPHI_RXP,
         input [7:0] INTERPHI_RXN,
         output [7:0] INTERPHI_TXP,
-        output [7:0] INTERPHI_TXN        
+        output [7:0] INTERPHI_TXN,
+        `endif
+        input [3:0] ADC_CLK_P,
+        input [3:0] ADC_CLK_N,
+        input [7:0] ADC_IN_P,
+        input [7:0] ADC_IN_N        
     );
     
+    `ifdef USE_INTERPHI
     localparam IBERT = "TRUE";
-
+    `else
+    localparam IBERT = "FALSE";
+    `endif
+    
     localparam INV_COUT = 1'b0;
     localparam INV_CIN = 1'b1;
     localparam INV_DOUT = 1'b1;
@@ -613,6 +619,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // 1111111111_00000000111111110000000011111111_111111
     // obviously you need to fudge a little on the risetime/bit period
     assign emio_rx = (emio_sel) ? bm_tx : cmd_rx;
+
     assign cmd_tx_d = 1'b0;
     // emio_tx idles high, so we use it to drive cmd_tx_t automatically.
     // the way UARTs work, the start bit is always 0, and the stop bit is always 1.

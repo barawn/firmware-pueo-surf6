@@ -95,12 +95,16 @@ module surf_id_ctrl(
 		`define WISHBONE_ADDRESS( addr, name, TYPE, par1, par2 )														\
 					`TYPE(BASE(addr), name, par1, par2)
 
+    // reg 0
     `WISHBONE_ADDRESS( 12'h000, DEVICE, OUTPUT, [31:0], 0);
+    // reg 1
     `WISHBONE_ADDRESS( 12'h004, VERSION, OUTPUT, [31:0], 0);
+    // reg 2
     `WISHBONE_ADDRESS( 12'h008, { {31{1'b0}}, dna_data }, OUTPUTSELECT, sel_dna, 0);
+    // reg 3
     `WISHBONE_ADDRESS( 12'h00C, ctrlstat_reg, OUTPUTSELECT, sel_ctrlstat, 0);
+    // reg 4
     `WISHBONE_ADDRESS( 12'h010, hsk_packet_count, OUTPUT, [31:0], 0);
-    assign wishbone_registers[4] = wishbone_registers[0];
     assign wishbone_registers[5] = wishbone_registers[1];
     assign wishbone_registers[6] = wishbone_registers[2];
     assign wishbone_registers[7] = wishbone_registers[3];

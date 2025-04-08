@@ -61,7 +61,8 @@
 module uram_event_buffer_v3 #(parameter NCHAN = 8,
                            parameter NBIT_IN = 72,
                            parameter BEGIN_PHASE = 1,
-                           parameter DOUT_LATENCY = 6)(
+                           parameter DOUT_LATENCY = 6,
+                           parameter DEBUG = "TRUE")(
         input memclk_i,
         input memclk_rst_i,
         input begin_i,
@@ -475,23 +476,34 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     wire [35:0] cas_dinb[NCHAN-1:0];
 
     assign cas_dinb[0] = {36{1'b0}};        
-
-    // sigh, silly debugging.
-    // 24 bit enable
-    // 8 bit data
-    // 1 bit loading
-    // 1 bit wr
-    // 12 bit addr
-    wire [23:0] fw_bram_en;
-    wire [16:0] fw_addr = { fw_uaddr, bram_raddr };
-    wire fw_mark = |fw_mark_i;
-    fwupd_ila u_fwupd_ila(.clk(ifclk_i),
-                          .probe0(fw_bram_en),
-                          .probe1(fw_dat_i),
-                          .probe2(fw_mark),
-                          .probe3(fw_wr_i),
-                          .probe4(fw_addr));
     
+    wire [23:0] fw_bram_en;    
+    generate
+        if (DEBUG == "TRUE") begin : ILA
+            // sigh, silly debugging.
+            // 24 bit enable
+            // 8 bit data
+            // 1 bit loading
+            // 1 bit wr
+            // 12 bit addr
+            wire [16:0] fw_addr = { fw_uaddr, bram_raddr };
+            wire fw_mark = |fw_mark_i;
+            (* CUSTOM_MC_DST_TAG = "FW_DATA" *)
+            reg [7:0] fw_dat = {8{1'b0}};
+            (* CUSTOM_MC_DST_TAG = "FW_VALID" *)
+            reg fw_wr = 1'b0;
+            always @(posedge ifclk_i) begin : RR
+                fw_dat <= fw_dat_i;
+                fw_wr <= fw_wr_i; 
+            end 
+            fwupd_ila u_fwupd_ila(.clk(ifclk_i),
+                                  .probe0(fw_bram_en),
+                                  .probe1(fw_dat),
+                                  .probe2(fw_mark),
+                                  .probe3(fw_wr),
+                                  .probe4(fw_addr));
+        end
+    endgenerate           
     generate
         genvar i;
         for (i=0;i<NCHAN;i=i+1) begin : CH

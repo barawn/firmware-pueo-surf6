@@ -40,6 +40,15 @@ module turfio_dout(
         output      DOUT_P,
         output      DOUT_N                
     );
+
+    // DOUT starts off high, then flops back to the training
+    // pattern once IFCLK is run.
+    // This allows detecting a reprogram event since you can't
+    // have a long run of 0xFF in the data output.
+    // The downside to this is that we can't use the ODDRE1
+    // primitive, we have to translate it into the OSERDES
+    // equivalent since the INIT attribute is fucking missing.
+    parameter INITIAL_DOUT = 1'b1;
     
     parameter [7:0] TRAIN_VALUE = 8'h6A; 
     parameter INV_DOUT = 1'b0;
@@ -63,6 +72,11 @@ module turfio_dout(
         
     (* CUSTOM_CC_DST = IFCLKTYPE *)        
     reg training = 0;        
+    
+    // this determines when we've actually powered up IFCLK.
+    // when we reprogram, this forces us to 0xFF until IFCLK starts
+    // running, which the TURFIO uses to detect a reprogram.
+    reg ifclk_not_running = 1;
         
     always @(posedge ifclk_x2_i) begin
         tx_phase_ifclkx2 <= tx_phase_buf;
@@ -105,6 +119,8 @@ module turfio_dout(
     // out the alignment. Yet another way of confirming
     // alignment. 
     always @(posedge ifclk_i) begin        
+        ifclk_not_running <= 1'b0;
+        
         sync_buf <= ifclk_sync_i;
         training <= train_i;
     
@@ -127,14 +143,13 @@ module turfio_dout(
     end
     
     assign dout_data_phase_o = !tx_phase && !training;
-    
+        
     wire oddre2_out;
-    ODDRE1 #(.SRVAL(INV_DOUT)) u_dout_ddr(.C(ifclk_x2_i),
+    ODDRE1 #(.SRVAL(1 ^ INV_DOUT)) u_dout_ddr(.C(ifclk_x2_i),
                                           .D1(tx_data_ifclkx2[0] ^ INV_DOUT),
                                           .D2(tx_data_ifclkx2[1] ^ INV_DOUT),
-                                          .SR(1'b0),
+                                          .SR(ifclk_not_running),
                                           .Q(oddre2_out));
-    
-    obufds_autoinv #(.INV(INV_DOUT)) u_dout(.I(oddre2_out),.O_P(DOUT_P),.O_N(DOUT_N));    
+    obuftds_autoinv #(.INV(INV_DOUT)) u_dout(.I(oddre2_out),.T(1'b0),.O_P(DOUT_P),.O_N(DOUT_N));    
     
 endmodule

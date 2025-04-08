@@ -198,7 +198,78 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
                         .m32_axis_tvalid(),
                         .s00_axis_tdata({128{1'b0}}));                                                             
         end else begin : G3
-            // figure this out in a bit
+            // gen3 only hooks up two of the clocks:
+            // adc1_clk_p/n
+            // dac0_clk_p/n
+            rfdc_gen3 
+                u_gen3( .s_axi_aclk(wb_clk_i),
+                        // need to handle resets in the bridge too!!
+                        .s_axi_aresetn(!wb_rst_i),
+                        `CONNECT_AXI4L_IF(s_axi_ , rfdc_ ),
+                        // clock hookup
+                        .adc1_clk_p(adc_clk_p[1]),
+                        .adc1_clk_n(adc_clk_n[1]),
+                        .dac0_clk_p(dac_clk_p),
+                        .dac0_clk_n(dac_clk_n),
+                        // adc hookup
+                        .vin0_01_p(adc_in_p[0]),
+                        .vin0_01_n(adc_in_n[0]),
+                        .vin0_23_p(adc_in_p[1]),
+                        .vin0_23_n(adc_in_n[1]),
+                        .vin1_01_p(adc_in_p[2]),
+                        .vin1_01_n(adc_in_n[2]),
+                        .vin1_23_p(adc_in_p[3]),
+                        .vin1_23_n(adc_in_n[3]),
+                        .vin2_01_p(adc_in_p[4]),
+                        .vin2_01_n(adc_in_n[4]),
+                        .vin2_23_p(adc_in_p[5]),
+                        .vin2_23_n(adc_in_n[5]),
+                        .vin3_01_p(adc_in_p[6]),
+                        .vin3_01_n(adc_in_n[6]),
+                        .vin3_23_p(adc_in_p[7]),
+                        .vin3_23_n(adc_in_n[7]),
+                        // dacs, whatevs
+                        .vout00_p(dac_out_p),
+                        .vout00_n(dac_out_n),
+                        // sysrefs
+                        .user_sysref_adc(sysref_pl_i),
+                        .user_sysref_dac(sysref_dac_i),
+                        // interface clocks
+                        .m0_axis_aresetn(1'b1),
+                        .m0_axis_aclk(aclk),
+                        .m1_axis_aresetn(1'b1),
+                        .m1_axis_aclk(aclk),
+                        .m2_axis_aresetn(1'b1),
+                        .m2_axis_aclk(aclk),
+                        .m3_axis_aresetn(1'b1),
+                        .m3_axis_aclk(aclk),
+                        .s0_axis_aresetn(1'b1),
+                        .s0_axis_aclk(aclk),
+                        .m00_axis_tdata( adc_vec[0] ),
+                        .m00_axis_tready(1'b1),
+                        .m00_axis_tvalid(),
+                        .m02_axis_tdata( adc_vec[1] ),
+                        .m02_axis_tready(1'b1),
+                        .m02_axis_tvalid(),
+                        .m10_axis_tdata( adc_vec[2] ),
+                        .m10_axis_tready(1'b1),
+                        .m10_axis_tvalid(),
+                        .m12_axis_tdata( adc_vec[3] ),
+                        .m12_axis_tready(1'b1),
+                        .m12_axis_tvalid(),
+                        .m20_axis_tdata( adc_vec[4] ),
+                        .m20_axis_tready(1'b1),
+                        .m20_axis_tvalid(),
+                        .m22_axis_tdata( adc_vec[5] ),
+                        .m22_axis_tready(1'b1),
+                        .m22_axis_tvalid(),
+                        .m30_axis_tdata( adc_vec[6] ),
+                        .m30_axis_tready(1'b1),
+                        .m30_axis_tvalid(),
+                        .m32_axis_tdata( adc_vec[7] ),
+                        .m32_axis_tready(1'b1),
+                        .m32_axis_tvalid(),
+                        .s00_axis_tdata({128{1'b0}}));                                                             
         end
     endgenerate
 endmodule

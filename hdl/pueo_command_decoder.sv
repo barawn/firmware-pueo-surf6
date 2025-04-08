@@ -1,5 +1,11 @@
 `timescale 1ns / 1ps
 // COMMAND DECODER
+//
+// Command decoding happens at 375 MHz, but obviously it's only
+// captured every 125 MHz and the data valid only occurs every
+// 15.625 MHz. So we need to track things here.
+//
+// The capture in rxclk_x3 happens when rxclk_ce_i goes 
 module pueo_command_decoder(
         input sysclk_i,
         input [31:0] command_i,
@@ -38,13 +44,21 @@ module pueo_command_decoder(
 
     // message stuff
     wire   message_valid = !command_i[31] && command_valid_i;
-    // used to stretch fw_valid being set. this makes
-    // fw_valid end up being exactly the same as an IFCLK domain
-    // signal (launch at 0, capture at 8 ns).
+    // used to stretch fw_valid being set.
+    // because it is set by command_valid_i (1st clock in period)
+    // and then cleared 2 clocks later, its period looks like
+    // aclk:   --__--__--__--__
+    // valid:  ----____________
+    // rrg0:   ____----________
+    // rrg1:   ________----____
+    // fwvld:  ____--------____
+    // ifclk:  ------______----
+    // meaning it has setup = 5.333 ns and hold = 0 ns
     reg [1:0] message_valid_rereg = {2{1'b0}};
     
     // Mode1
     wire [1:0] mode1type = command_i[24 +: 2];
+    // has setup = 5.333 ns and gigantic hold, but just make it -2.667 for fun
     wire [7:0] mode1data = command_i[16 +: 8];
     localparam [1:0] MODE1TYPE_SPECIAL = 2'b00;
     localparam [1:0] MODE1TYPE_NORMAL = 2'b01;
@@ -56,9 +70,11 @@ module pueo_command_decoder(
     localparam [7:0] MODE1SPECIAL_FW_MARK_B = 8'h03;
 
     reg mode1_rst = 0;
+    (* CUSTOM_MC_SRC_TAG = "FW_DATA", CUSTOM_MC_MIN = "-1.0", CUSTOM_MC_MAX = "2.0" *)
     reg [7:0] mode1_tdata = {8{1'b0}};
     reg mode1_tvalid = 0;
     reg mode1_tlast = 0;
+    (* CUSTOM_MC_SRC_TAG = "FW_VALID", CUSTOM_MC_MIN = "0", CUSTOM_MC_MAX = "2.0" *)
     reg firmware_valid = 0;
     
     
