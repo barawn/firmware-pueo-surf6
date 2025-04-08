@@ -6248,7 +6248,7 @@
         "ARCHITECTURE": [ { "value": "zynquplusRFSOC" } ],
         "BASE_BOARD_PART": [ { "value": "" } ],
         "BOARD_CONNECTIONS": [ { "value": "" } ],
-        "DEVICE": [ { "value": "xczu25dr" } ],
+        "DEVICE": [ { "value": "xczu47dr" } ],
         "PACKAGE": [ { "value": "ffve1156" } ],
         "PREFHDL": [ { "value": "VERILOG" } ],
         "SILICON_REVISION": [ { "value": "" } ],
