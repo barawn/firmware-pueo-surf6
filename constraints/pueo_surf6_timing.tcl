@@ -287,6 +287,8 @@ set_mc_paths BBOT_XFER
 set_mc_paths CTOP_XFER
 set_mc_paths CBOT_XFER
 set_mc_paths URAM_RESET
+set_mc_paths FW_VALID
+set_mc_paths FW_DATA
 
 #################################################################
 

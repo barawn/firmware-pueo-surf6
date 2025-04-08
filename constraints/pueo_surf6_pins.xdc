@@ -29,8 +29,8 @@ set_property -dict { PACKAGE_PIN AN17 IOSTANDARD LVDS } [get_ports DOUT_P]
 set_property -dict { PACKAGE_PIN AM17 IOSTANDARD LVDS } [get_ports DOUT_N]
 
 # swapped between revA/B
-set_property -dict { PACKAGE_PIN D13 IOSTANDARD LVCMOS33 } [get_ports B88_L9_P]
-set_property -dict { PACKAGE_PIN C13 IOSTANDARD LVCMOS33 } [get_ports B88_L9_N]
+set_property -dict { PACKAGE_PIN D13 IOSTANDARD LVCMOS33 DRIVE 8} [get_ports B88_L9_P]
+set_property -dict { PACKAGE_PIN C13 IOSTANDARD LVCMOS33 DRIVE 8} [get_ports B88_L9_N]
 
 # GPOs
 set_property -dict { PACKAGE_PIN D12 IOSTANDARD LVCMOS33 } [get_ports READY_B]
