@@ -20,10 +20,15 @@ module turfio_cin_surf #(parameter INV=1'b0,
         output [8:0] delay_cntvalueout_o,
         // now the iserdes data
         output [3:0] data_o,
+        // and this is our "we have seen nonzero data" indicator
+        output data_active_o,
         // actual input
         input CIN_P,
         input CIN_N
     );
+    
+    (* CUSTOM_CC_SRC = CLKTYPE *)
+    reg data_active = 0;
     
     // both a source and destination for cross-clock
     (* CUSTOM_CC_SRC = CLKTYPE, CUSTOM_CC_DST = CLKTYPE *)
@@ -181,13 +186,14 @@ module turfio_cin_surf #(parameter INV=1'b0,
                          .EN_VTC(en_vtc_i));
                          
     always @(posedge rxclk_i) begin
+        if (data_o != 4'hF) data_active <= 1;
         if (delay_rd_i) begin
             delay_cntvalueout <= delay_cntvalueout_vec[delay_sel_i];
         end
     end            
 
     assign delay_cntvalueout_o = delay_cntvalueout;    
-
+    assign data_active_o = data_active;
     generate
         if (DEBUG == "TRUE") begin : ILA
             cin_ila u_ila(.clk(rxclk_i),.probe0(data_o));
