@@ -67,6 +67,10 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
         output aclk_reset_o,
         input ifclk_alignerr_i,
         
+        // data active indicator. indicates a response to a train request at boot
+        // (i.e. we can train now)
+        input data_active_i,
+        
         // mmcm & phase shift interface
         output ps_en_o,
         input ps_done_i,
@@ -158,6 +162,10 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     wire rxclk_access = `DOMAIN_MATCH( RXCLK_DOMAIN , wb_adr_i);
     wire aclk_access = `DOMAIN_MATCH( ACLK_DOMAIN , wb_adr_i);
     
+    ///////// STATIC CLOCK CROSS
+    (* CUSTOM_CC_DST = WBCLKTYPE, ASYNC_REG = "TRUE" *)
+    reg [1:0] data_active_wbclk = 2'b00;
+    
     ///////// RXCLK CLOCK CROSS HANDLING
     wire rxclk_waiting;
     reg rxclk_waiting_reg = 0;
@@ -172,7 +180,7 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     wire rxclk_ack_flag_wbclk;
     flag_sync u_rxclk_ack_sync(.clkA(rxclk_i),.clkB(wb_clk_i),
                                .in_clkA(rxclk_ack_flag_rxclk),
-                               .out_clkB(rxclk_ack_flag_wbclk));                                   
+                               .out_clkB(rxclk_ack_flag_wbclk));                                       
     
     ///////// ACLK CLOCK CROSS HANDLING
     wire aclk_waiting;
@@ -293,8 +301,9 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     (* CUSTOM_CC_DST = WBCLKTYPE *)
     reg [1:0] idelayctrl_rdy = {2{1'b0}};
     
+    // drop this back to a single bit to free up a bit for data active
     (* CUSTOM_CC_SRC = WBCLKTYPE *)
-    reg [1:0] train_enable = {2{1'b0}};
+    reg train_enable = 0;
 
     reg bitslip_rst = 0;
     reg bitslip = 0;
@@ -327,7 +336,8 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
           lock_rst,             // 10
           bitslip,              // 9
           bitslip_rst,          // 8
-          train_enable,         // 7-6
+          data_active_wbclk[1], // 7
+          train_enable,         // 6
           mmcm_locked[1],       // 5
           mmcm_rst,             // 4
           idelayctrl_rdy[1],    // 3
@@ -346,6 +356,9 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     assign aclk_waiting = (state == WAIT_ACK_ACLK);
     
     always @(posedge wb_clk_i) begin
+        // data active clock cross
+        data_active_wbclk <= { data_active_wbclk[0], data_active_i };
+        
         // PHASE SHIFT LOGIC
         if (target_ps_value != current_ps_value) begin
             if (ps_waiting) ps_enable <= 0;

@@ -134,6 +134,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                     .aclk_reset_o(aclk_reset_o),
                     .ifclk_alignerr_i(align_err),
                     
+                    .data_active_i(data_active),
+                    
                     .ps_en_o(ps_en),
                     .ps_done_i(ps_done),
                     .mmcm_locked_i(mmcm_locked),
@@ -199,7 +201,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     // now the CIN module looks more like the TURF side, because we don't
     // have a bitslip module. Except we integrate a bit more.
     wire [3:0] cin_rxclk;
-    
+    // indicator that we've seen something other than a static 1
+    wire       cin_active;
     turfio_cin_surf #(.INV(INV_CIN),.CLKTYPE("RXCLK"))
         u_cin(.rxclk_i(rxclk),
               .rxclk_x2_i(rxclk_x2),
@@ -211,6 +214,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
               .delay_cntvaluein_i(delay_cntvaluein),
               .delay_cntvalueout_o(delay_cntvalueout),
               .data_o(cin_rxclk),
+              .data_active_o(cin_active),
               .CIN_P(CIN_P),
               .CIN_N(CIN_N));
     
