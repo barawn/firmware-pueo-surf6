@@ -321,10 +321,14 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     wire select_header_data;
     // read top byte first
     wire [1:0] header_data_addr = ~bram_raddr[1:0];
+    // The headers go in with the trig time first. Because the top bit
+    // in the trig time is unused, we set it equal to 1 which allows
+    // the DOUT path to automatically know when an event starts because
+    // it looks for a 1 in the top bit when it's IDLE.
     event_hdr_fifo u_hdr_fifo(.wr_clk(memclk_i),
                               .rd_clk(ifclk_i),
                               .rst( memclk_rst_i ),
-                              .din( { event_no_i , 1'b0, trig_time_i } ),
+                              .din( { 1'b1, trig_time_i, event_no_i } ),
                               .wr_en(trig_valid_i),
                               .full(),
                               .dout( header_data ),
