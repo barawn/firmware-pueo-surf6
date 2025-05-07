@@ -14,7 +14,11 @@ module surf_id_ctrl(
         input hsk_rx_i,
         // data to TURFIO
         input hsk_tx_i,
-        
+        // watchdog trigger and null byte.
+        // watchdog trigger blows up the housekeeping path entirely.
+        output watchdog_trigger_o,
+        output watchdog_null_o,
+                
         output aclk_ok_o,
         output rxclk_ok_o,
         output gtpclk_ok_o,
@@ -47,16 +51,23 @@ module surf_id_ctrl(
     
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg [4:0] sync_offset = {5{1'b0}};
+
+    // watchdog fun
+    reg watchdog_trigger_enable = 0;
+    reg watchdog_trigger = 0;
+    reg watchdog_trigger_rereg = 0;
+    reg watchdog_null = 0;
+    reg rackclk_was_ok = 0;
     
     // top 8 bits are a global stat: top bit is TURFIO ready
-    wire [31:0] ctrlstat_reg = { rackclk_ok_o, {10{1'b0}}, sync_offset, ctrlstat_gpi, ctrlstat_gpo };
+    wire [31:0] ctrlstat_reg = { rackclk_ok_o, {6{1'b0}}, watchdog_trigger_enable,                                 
+                                 {3{1'b0}}, sync_offset, // 23:16
+                                 ctrlstat_gpi,      // 15:8
+                                 ctrlstat_gpo };    // 7:0
     
-    // housekeeping packet count register
-    // packet counts are cleared by ANY logical zero on RX, and then
-    // increment whenever zeros have been seen for ~18 us or 
-    // greater on TX (this will include us, but who cares).
-    // as normal we sleaze this by using the overflow.
-    localparam [11:0] PACKET_TIMER_RESET_VAL = 12'd248;
+    // housekeeping timer, doubly used for sending/receiving nulls
+    localparam [11:0] PACKET_TIMER_RESET_VAL = 12'd696;
+    localparam [11:0] WATCHDOG_RESET_VAL = 12'd496;
     reg [11:0] packet_timer_count = PACKET_TIMER_RESET_VAL;
     reg [3:0] hsk_packet_count = {4{1'b0}};
         
@@ -154,9 +165,31 @@ module surf_id_ctrl(
             end
         end
     endgenerate
+
+    // we abuse the packet timer for two roles - it should be trivial to merge the logic.
+    // running at 500 kbps, each bit is 2 us, and a null byte is 9 bit times long, or
+    // 18 us, because a zero is
+    // 0000000001
+    // |        ^ stop bit
+    // ^ start bit
+    // so to watch for an incoming null, we look for 8.5 = 17 us = 3400 clocks
+    // and to send an outgoing null we run for 9 = 18 us = 3600 clocks
+    // we use a counter which is held in reset normally at 4096-3400, and then counts up
+    // otherwise
+    // it gets reset to 4096-3600 on a watchdog start and counts up
     always @(posedge wb_clk_i) begin
-        if (hsk_tx_i) packet_timer_count <= PACKET_TIMER_RESET_VAL;
+        rackclk_was_ok <= rackclk_ok_o;
+        if (watchdog_trigger_enable && (rackclk_was_ok && !rackclk_ok_o))
+            watchdog_trigger <= 1;
+        watchdog_trigger_rereg <= watchdog_trigger;
+
+        // the packet counter keeps running after the watchdog is triggered, that's fine.        
+        if (watchdog_trigger && !watchdog_trigger_rereg) packet_timer_count <= WATCHDOG_RESET_VAL;
+        else if (hsk_tx_i && !watchdog_trigger) packet_timer_count <= PACKET_TIMER_RESET_VAL;
         else packet_timer_count <= packet_timer_count[10:0] + 1;
+
+        if (packet_timer_count[11]) watchdog_null <= 0;
+        else if (watchdog_trigger && !watchdog_trigger_rereg) watchdog_null <= 1;
 
         if (!hsk_rx_i) hsk_packet_count <= {4{1'b0}};
         else if (packet_timer_count[11]) hsk_packet_count <= hsk_packet_count + 1;
@@ -172,6 +205,7 @@ module surf_id_ctrl(
         if (sel_ctrlstat && wb_we_i && wb_ack_o) begin
             // the gpo stuff gets handled above due to stupidity
             if (wb_sel_i[2]) sync_offset <= wb_dat_i[16 +: 5];
+            if (wb_sel_i[3]) watchdog_trigger_enable <= wb_dat_i[24];
         end
     end    
     
@@ -211,5 +245,8 @@ module surf_id_ctrl(
     assign wb_err_o = 1'b0;
     assign wb_rty_o = 1'b0;
     assign wb_dat_o = (wb_adr_i[6]) ? dat_clockmon : dat_internal;
+    
+    assign watchdog_null_o = watchdog_null;
+    assign watchdog_trigger_o = watchdog_trigger;
     
 endmodule

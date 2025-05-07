@@ -15,8 +15,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
-                    parameter [3:0] VER_MINOR = 4'd0,
-                    parameter [7:0] VER_REV = 8'd51,
+                    parameter [3:0] VER_MINOR = 4'd1,
+                    parameter [7:0] VER_REV = 8'd1,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -131,11 +131,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire aclk;
     // PL sysref
     wire pl_sysref;
-    // command tx input (from other SURF)/data/tristate and command rx
+    // command tx input (from other SURF)/data/tristate, command rx, and the watchdog null wakeup
     wire cmd_tx_i;
     wire cmd_tx_d;
     wire cmd_tx_t;
     wire cmd_rx;
+    wire watchdog_null;     // forces a NULL byte into the UART to affect a wakeup
+    wire watchdog_trigger;  // indicates that we're gonna go boom
     // revB clk reset
     wire clk_rst_b;
     // The GPOs are
@@ -563,6 +565,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
                   .hsk_rx_i(cmd_rx),
                   .hsk_tx_i(cmd_tx_i),
                   
+                  .watchdog_null_o(watchdog_null),
+                  .watchdog_trigger_o(watchdog_trigger),
+                  
                   .rxclk_ok_o(rxclk_ok),
                   .aclk_ok_o(aclk_ok),
                   .gtpclk_ok_o(gtpclk_ok),
@@ -618,6 +623,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // Here the rise time would be 6 clocks, so if we retime it, we have
     // 1111111111_00000000111111110000000011111111_111111
     // obviously you need to fudge a little on the risetime/bit period
+    wire cpu_rx = (watchdog_trigger) ? !watchdog_null : cmd_rx;
     assign emio_rx = (emio_sel) ? bm_tx : cmd_rx;
 
     assign cmd_tx_d = 1'b0;
@@ -682,8 +688,16 @@ module pueo_surf6 #(parameter IDENT="SURF",
     assign emio_sel = emio_gpio_o[1] && !emio_gpio_t[1];    
     assign clk_rst_b = !emio_gpio_t[3] && emio_gpio_o[3] ? 0 : 1;
 
-    // emio 4-7 are open for now
-    assign emio_gpio_i[7:4] = {4{1'b0}};
+    // emio 4 is rackclk_ok, to detect TURFIO disappearing (note the state machine
+    // checks via register path, but the main pysurfHskd checks via GPIOs)
+    // The surf_id_ctrl register core also has a trigger for generating
+    // a NULL byte on the UART when enabled - this will wake up the
+    // processor if it's sleeping, at which point it'll run through
+    // and check again. This is stupid but easier than setting up
+    // an additional GPIO.
+    // 500 kbaud = 2 us/bit = 20 us = 2000 100 MHz clocks.
+    assign emio_gpio_i[4] = rackclk_ok;
+    assign emio_gpio_i[7:5] = {3{1'b0}};
     
     // emio 9/8 is an interrupt (fwmarked[0]) (output)
     assign emio_gpio_i[8] = emio_fwupdate[0];
