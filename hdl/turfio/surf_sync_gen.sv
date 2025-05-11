@@ -96,7 +96,7 @@ module surf_sync_gen(
     // have sync = 1. We use this multiple places so we register it.
     // Normally sync would toggle on clk_phase_counter[3:0] == 15
     // so this is high on clk_phase_counter == 14.
-    (* CUSTOM_MC_SRC_TAG = "SYNC", CUSTOM_MC_MIN = 0, CUSTOM_MC_MAX = 8.0 *)
+    (* CUSTOM_MC_SRC_TAG = "SYNC", CUSTOM_MC_MIN = "0.0", CUSTOM_MC_MAX = "8.0" *)
     reg sync_is_next = 0;
         
     // debug, for visibility
