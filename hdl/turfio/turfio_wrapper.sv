@@ -70,21 +70,6 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     (* CUSTOM_CC_SRC = "SYSREFCLK" *)
     reg locked_alignment_err = 0;
 
-    // let's test things
-    reg aclk_toggle = 0;
-    always @(posedge aclk_i) aclk_toggle <= ~aclk_toggle;
-    reg ifclk_capture = 0;
-    reg ifclk_out = 0;
-    always @(posedge ifclk_i) begin
-        ifclk_capture <= aclk_toggle;
-        ifclk_out <= ifclk_capture;
-    end
-    // what-freaking-ever
-    //obufds_autoinv #(.INV(INV_TXCLK)) u_txclk(.I(1'b0),.O_P(TXCLK_P),.O_N(TXCLK_N));
-//    obufds_autoinv #(.INV(INV_COUT)) u_cout(.I(1'b0),.O_P(COUT_P),.O_N(COUT_N));
-//    obufds_autoinv #(.INV(INV_DOUT)) u_dout(.I(ifclk_out),.O_P(DOUT_P),.O_N(DOUT_N));    
-
-
     // Register core outputs
     wire ps_en;
     wire ps_done;
