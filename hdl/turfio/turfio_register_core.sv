@@ -192,7 +192,7 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     reg aclk_waiting_reg = 0;
     always @(posedge wb_clk_i) aclk_waiting_reg <= aclk_waiting;
     wire aclk_waiting_flag_wbclk = (aclk_waiting && !aclk_waiting_reg);
-    wire aclk_waiting_flag_sysclk;
+    wire aclk_waiting_flag_aclk;
     flag_sync u_aclk_waiting_sync(.clkA(wb_clk_i),.clkB(aclk_i),
                                   .in_clkA(aclk_waiting_flag_wbclk),
                                   .out_clkB(aclk_waiting_flag_aclk));
