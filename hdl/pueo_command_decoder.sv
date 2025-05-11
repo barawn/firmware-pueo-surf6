@@ -11,7 +11,7 @@ module pueo_command_decoder(
         input [31:0] command_i,
         input        command_valid_i,
         // Run commands
-        output       rundosync_o,
+        output       rundo_sync_o,
         output       runrst_o,
         output       runstop_o,
         // PPS
@@ -84,13 +84,20 @@ module pueo_command_decoder(
     localparam [1:0] RUNCMD_DO_SYNC = 2'b01;
     localparam [1:0] RUNCMD_RESET = 2'b10;
     localparam [1:0] RUNCMD_STOP = 2'b11;
-    // Note that these go into a programmable SYSCLK delay,
-    // so the 1 clock offset here doesn't matter.
-    reg run_do_sync = 0;
-    reg run_rst = 0;    
-    // run_stop's timing doesn't matter
-    reg run_stop = 0;
-
+    // Qualify sync. command_valid_i is occuring in ACLK sequence 0 out of 7
+    // so these are now sequence 1 out of 7.
+    reg do_rundo_sync = 0;
+    reg do_runrst = 0;    
+    reg do_runstop = 0;
+    // And now these are now occurring in sequence 2 out of 7, meaning
+    // that they can be captured by IFCLK and MEMCLK with their full ACLK max_delays
+    // (qualifying in memclk on phase 3)
+    
+    // So for EVERYONE these have min_delay = 8, max_delay = 0.
+    reg rundo_sync = 0;
+    reg runrst = 0;
+    reg runstop = 0;
+    
     reg pps = 0;
     
     reg fw_mark_a = 0;
@@ -104,9 +111,14 @@ module pueo_command_decoder(
             mode1_tlast <= (mode1type == MODE1TYPE_LAST);            
         end            
         // These are flags
-        run_do_sync <= (runcmd == RUNCMD_DO_SYNC) && message_valid;
-        run_rst <= (runcmd == RUNCMD_RESET) && message_valid;
-        run_stop <= (runcmd == RUNCMD_STOP) && message_valid;
+        do_rundo_sync <= (runcmd == RUNCMD_DO_SYNC) && message_valid;
+        do_runrst <= (runcmd == RUNCMD_RESET) && message_valid;
+        do_runstop <= (runcmd == RUNCMD_STOP) && message_valid;
+        
+        rundo_sync <= do_rundo_sync;
+        runrst <= do_runrst;
+        runstop <= do_runstop;
+        
         mode1_rst <= (mode1type == MODE1TYPE_SPECIAL) && (mode1data == MODE1SPECIAL_RESET) && message_valid;
         // stretch firmware_valid. mode1_tdata is naturally stretched.
         if (message_valid_rereg[1]) firmware_valid <= 1'b0;
@@ -126,6 +138,7 @@ module pueo_command_decoder(
     assign fw_tvalid = firmware_valid;
     assign fw_mark_o = {fw_mark_b, fw_mark_a};
     
-    assign rundosync_o = run_do_sync;
-    assign runrst_o = run_rst;
+    assign rundo_sync_o = rundo_sync;
+    assign runrst_o = runrst;
+    assign runstop_o = runstop;
 endmodule
