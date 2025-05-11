@@ -465,6 +465,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            .command_i(turf_command),
                                            .command_valid_i(turf_command_valid),
                                            
+                                           .wb_clk_i(wb_clk),
                                            .rundo_sync_wbclk_o(wbclk_do_sync),
                                            
                                            .rundo_sync_o(run_dosync),
