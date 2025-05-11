@@ -268,6 +268,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire ifclk_sync;
     (* KEEP = "TRUE" *)
     wire memclk_sync;
+    // indicates in a register whether any sync has been seen (so we can do MTS-y stuff).
+    wire wbclk_do_sync;
     
     wire ifclk_locked;
     wire memclk_locked;
@@ -459,6 +461,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            .command_i(turf_command),
                                            .command_valid_i(turf_command_valid),
                                            
+                                           .rundo_sync_wbclk_o(wbclk_do_sync),
+                                           
                                            .rundo_sync_o(run_dosync),
                                            .runrst_o(run_reset),
                                            .runstop_o(run_stop),
@@ -564,6 +568,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                   .gtp_clk_i(gtp_clk),
                   .rxclk_i(rxclk),
                   .rackclk_i(rackclk),
+                  
+                  .rundo_sync_i(wbclk_do_sync),
                   
                   .gpi_i(idctrl_gpi),
                   .gpo_o(idctrl_gpo),
