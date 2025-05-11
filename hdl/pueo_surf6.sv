@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd1,
-                    parameter [7:0] VER_REV = 8'd1,
+                    parameter [7:0] VER_REV = 8'd6,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -69,6 +69,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
         // data output
         output DOUT_P,      // L5N AN17
         output DOUT_N,      // L5P AM17
+        // Test points
+        output TP2,
+        output TP3,
         // UART commanding path input. These can be piped through EMIO too.
         // For some *totally* insane reason I flopped these between revisions
         // The pin pairs are
@@ -456,7 +459,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            .command_i(turf_command),
                                            .command_valid_i(turf_command_valid),
                                            
-                                           .rundosync_o(run_dosync),
+                                           .rundo_sync_o(run_dosync),
                                            .runrst_o(run_reset),
                                            .runstop_o(run_stop),
                                            
@@ -473,6 +476,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            .trig_valid_o(trigger_time_valid));
 
     // sync generation
+    wire [4:0] sync_offset; // from idctrl
+    
     surf_sync_gen u_syncgen(.aclk_i(aclk),
                             .aclk_phase_i(aclk_phase),
                             .sync_req_i(run_dosync),
@@ -480,6 +485,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                             .memclk_i(memclk),
                             .memclk_phase_i(memclk_phase),
                             .ifclk_i(ifclk),
+                            .dbg_sync_o( { TP3, TP2 } ),
                             .sync_o(sync),
                             .sync_memclk_o(memclk_sync),
                             .sync_ifclk_o(ifclk_sync));
