@@ -10,6 +10,11 @@ module pueo_command_decoder(
         input sysclk_i,
         input [31:0] command_i,
         input        command_valid_i,
+        
+        // this lets software know that a sync was seen.
+        input        wb_clk_i,
+        output       rundo_sync_wbclk_o,        
+        
         // Run commands
         output       rundo_sync_o,
         output       runrst_o,
@@ -89,6 +94,12 @@ module pueo_command_decoder(
     reg do_rundo_sync = 0;
     reg do_runrst = 0;    
     reg do_runstop = 0;
+    
+    // do_rundo_sync is still a flag, so we can use it to inform
+    // wbclk without overloading rundo_sync.
+    flag_sync u_do_sync_sync(.in_clkA(do_rundo_sync),.out_clkB(rundo_sync_wbclk_o),
+                             .clkA(sysclk_i), .clkB(wb_clk_i));
+    
     // And now these are now occurring in sequence 2 out of 7, meaning
     // that they can be captured by IFCLK and MEMCLK with their full ACLK max_delays
     // (qualifying in memclk on phase 3)
