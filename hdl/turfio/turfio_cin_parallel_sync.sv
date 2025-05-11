@@ -21,6 +21,8 @@ module turfio_cin_parallel_sync(
         input lock_i,
         // sequence found, lock is OK
         output locked_o,
+        // out of training. This JUST needs to go to a register, that's it.
+        output running_o,
         // output (after capture or lock)
         output [31:0] cin_parallel_o,
         output        cin_parallel_valid_o,
@@ -51,6 +53,9 @@ module turfio_cin_parallel_sync(
     reg enable_lock = 0;
     (* CUSTOM_CC_SRC = CLKTYPE *)
     reg locked = 0;
+    // running indicates we've seen something OTHER than train data after locking.
+    (* CUSTOM_CC_SRC = CLKTYPE *)
+    reg running = 0;
     // this was dropped in the TURFIO b/c locked is actually what you want
 //    reg locked_rereg = 0;
     reg [3:0] aclk_sequence = {4{1'b0}};
@@ -68,6 +73,8 @@ module turfio_cin_parallel_sync(
                                   .a(4'h7),
                                   .din(cin_history[3:0]),
                                   .dout(cin_delayed));        
+
+    wire cin_train_match = (current_cin == TRAIN_SEQUENCE);
     always @(posedge aclk_i) begin
         if (lock_rst_i) enable_lock <= 1'b0;
         else if (lock_i) enable_lock <= 1'b1;
@@ -87,8 +94,16 @@ module turfio_cin_parallel_sync(
         // this might be big at 375 MHz, maybe pipeline it
         if (lock_rst_i) locked <= 1'b0;
         else begin
-            if (enable_lock && cpb_valid && current_cin == TRAIN_SEQUENCE) locked <= 1'b1;
+            if (enable_lock && cpb_valid && cin_train_match) locked <= 1'b1;
         end
+        
+        // we want to keep this as the same comparator, so we can't
+        // use the output command which is reregistered. 
+        if (lock_rst_i) running <= 1'b0;
+        else begin
+            if (locked && enable_capture && cpb_valid && current_cin != TRAIN_SEQUENCE) running <= 1'b1;
+        end            
+        
 //        if (lock_rst_i) locked_rereg <= 1'b0;
 //        else locked_rereg <= locked;
         
@@ -135,5 +150,6 @@ module turfio_cin_parallel_sync(
     assign cin_parallel_valid_o = aclk_sequence[3] && cpb_valid;
     assign cin_parallel_o = cin_capture;
     assign locked_o = locked;
+    assign running_o = running;
     assign cin_biterr_o = cin_biterr;
 endmodule
