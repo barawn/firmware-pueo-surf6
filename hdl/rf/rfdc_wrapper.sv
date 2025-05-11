@@ -159,6 +159,8 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
                         .vout00_p(dac_out_p),
                         .vout00_n(dac_out_n),
                         // sysrefs
+                        .sysref_in_p(sysref_p),
+                        .sysref_in_n(sysref_n),
                         .user_sysref_adc(sysref_pl_i),
                         .user_sysref_dac(sysref_dac_i),
                         // interface clocks
@@ -232,6 +234,8 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
                         .vout00_p(dac_out_p),
                         .vout00_n(dac_out_n),
                         // sysrefs
+                        .sysref_in_p(sysref_p),
+                        .sysref_in_n(sysref_n),
                         .user_sysref_adc(sysref_pl_i),
                         .user_sysref_dac(sysref_dac_i),
                         // interface clocks
