@@ -58,3 +58,7 @@ set_property -dict { PACKAGE_PIN AF18 IOSTANDARD LVCMOS18} [get_ports { DBG_LED[
 set_property -dict { PACKAGE_PIN AD18 IOSTANDARD LVCMOS18} [get_ports { DBG_LED[3] }]
 
 set_property -dict { PACKAGE_PIN AM14 IOSTANDARD LVCMOS18} [get_ports { CLK_SDO_SYNC }]
+
+# test points
+set_property -dict { PACKAGE_PIN E14 IOSTANDARD LVCMOS33} [get_ports TP2]
+set_property -dict { PACKAGE_PIN D14 IOSTANDARD LVCMOS33} [get_ports TP3]
