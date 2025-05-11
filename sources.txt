@@ -2,7 +2,6 @@ bd/zynq_bd/zynq_bd.bd
 hdl/serial_if/cobs/axis_cobs_decode.v
 hdl/serial_if/cobs/axis_cobs_encode.v
 hdl/serial_if/cobs/axis_fifo.v
-hdl/serial_if/boardman_interface.v
 hdl/serial_if/boardman_interface_v2.v
 hdl/serial_if/boardman_v2_cobs.v
 hdl/serial_if/boardman_v2_sm.v
@@ -37,16 +36,13 @@ hdl/turfio/bit_align.sv
 verilog-library-barawn/hdl/srlvec.v
 hdl/turfio/turfio_dout.sv
 hdl/pueo_command_decoder.sv
-hdl/turfio/pueo_clk_phase.v
 hdl/pueo_wrapper.sv
 hdl/rf/rfdc_wrapper.sv
 hdl/uram/uram_sync_transfer.sv
 hdl/uram/uram_read_counter.sv
 hdl/uram/uram_event_timer.sv
 hdl/uram/uram_event_chbuffer.sv
-hdl/serial_if/boardman_v3_sm.v
 hdl/interphi/interphi_ibert_wrapper.sv
-hdl/serial_if/pueo_command_wrapper.sv
 hdl/turfio/rackctl_rxctl_sm_v1.sv
 hdl/rackctl/wb_rackctl_master.sv
 hdl/cmdproc_buffer.sv
