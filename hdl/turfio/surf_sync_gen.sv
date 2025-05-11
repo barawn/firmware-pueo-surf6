@@ -161,8 +161,8 @@ module surf_sync_gen(
 
     always @(posedge aclk_i) begin
         aclk_phase_buf <= { aclk_phase_buf[0], aclk_phase_i };
-        aclk_sync <= aclk_phase_buf[2] && sync_is_next;
-        if (aclk_phase_buf[2] && sync_is_next) aclk_sysref <= 1;
+        aclk_sync <= aclk_phase_buf[1] && sync_is_next;
+        if (aclk_phase_buf[1] && sync_is_next) aclk_sysref <= 1;
         else if (aclk_clear_sysref) aclk_sysref <= 0;
     end
 
@@ -173,7 +173,7 @@ module surf_sync_gen(
     
     always @(posedge memclk_i) begin
         memclk_phase_buf <= { memclk_phase_buf[1:0], memclk_phase_i };
-        memclk_sync <= memclk_phase_buf[3] && sync_is_next;
+        memclk_sync <= memclk_phase_buf[2] && sync_is_next;
     end
 
     assign sync_o = aclk_sync;
