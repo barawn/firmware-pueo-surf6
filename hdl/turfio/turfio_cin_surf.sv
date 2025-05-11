@@ -13,14 +13,16 @@ module turfio_cin_surf #(parameter INV=1'b0,
         input rst_i,
         // vtc enable
         input en_vtc_i,
-        input delay_load_i,
+        input delay_load_i, 
         input delay_rd_i,
         input [1:0] delay_sel_i,
         input [8:0] delay_cntvaluein_i,
         output [8:0] delay_cntvalueout_o,
         // now the iserdes data
         output [3:0] data_o,
-        // and this is our "we have seen nonzero data" indicator
+        // and this is our "we have seen nonzero data" indicator.
+        // we need to reset this after we start up.
+        input  data_active_rst_i,
         output data_active_o,
         // actual input
         input CIN_P,
@@ -186,7 +188,8 @@ module turfio_cin_surf #(parameter INV=1'b0,
                          .EN_VTC(en_vtc_i));
                          
     always @(posedge rxclk_i) begin
-        if (data_o != 4'hF) data_active <= 1;
+        if (data_active_rst_i) data_active <= 0;
+        else if (data_o != 4'hF) data_active <= 1;
         if (delay_rd_i) begin
             delay_cntvalueout <= delay_cntvalueout_vec[delay_sel_i];
         end
