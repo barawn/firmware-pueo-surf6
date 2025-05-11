@@ -131,7 +131,6 @@ module surf_sync_gen(
     end
     
     assign dbg_sync_o = { debug_sync2, debug_sync};
-    assign ifclk_sync_o = clk_phase_counter[4];
 
     // in aclk, we just need to phase track: aclk_phase_i
     // is phase 1, so we need to delay by 2.

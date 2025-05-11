@@ -291,6 +291,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     // reset at LOAD_ENABLE_HEADER1, shift at ADDR3_SHIFT_ENABLE
     wire [2:0] active_bram;
     wire [2:0] active_bram_casdomux;
+    wire bram_casdomuxen;
     wire [NCHAN-1:0] active_chan;    
     wire [3*NCHAN-1:0] full_casdomux = {
         !active_chan[7] ? 3'b111 : active_bram_casdomux,
