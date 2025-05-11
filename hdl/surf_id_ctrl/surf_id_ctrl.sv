@@ -182,7 +182,8 @@ module surf_id_ctrl(
     // otherwise
     // it gets reset to 4096-3600 on a watchdog start and counts up
     always @(posedge wb_clk_i) begin
-        if (rundo_sync_i) rundo_sync_seen <= 1'b1;
+        if (sel_ctrlstat && wb_we_i && wb_ack_o && wb_sel_i[2] && wb_dat_i[23]) rundo_sync_seen <= 1'b0;
+        else if (rundo_sync_i) rundo_sync_seen <= 1'b1;
     
         rackclk_was_ok <= rackclk_ok_o;
         if (watchdog_trigger_enable && (rackclk_was_ok && !rackclk_ok_o))
