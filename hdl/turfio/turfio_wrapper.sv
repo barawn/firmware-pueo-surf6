@@ -93,6 +93,10 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     wire capture_err;
     wire align_err;
     
+    // this goes high after boot to indicate that we've seen toggling on CIN
+    wire cin_active;
+    wire cin_active_rst;
+    
     wire cin_rst;
     wire en_vtc;
     wire delay_load;
@@ -112,7 +116,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     wire lock_rst;
     wire lock_req;
     wire lock_status;
-    
+    wire cin_running;
+
     wire [1:0] train_en;
 
     // dear god I hope this never happens
@@ -134,7 +139,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                     .aclk_reset_o(aclk_reset_o),
                     .ifclk_alignerr_i(align_err),
                     
-                    .data_active_i(data_active),
+                    .cin_active_i(cin_active),
+                    .cin_active_rst_o(cin_active_rst),
                     
                     .ps_en_o(ps_en),
                     .ps_done_i(ps_done),
@@ -160,6 +166,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                     .lock_rst_o(lock_rst),
                     .lock_req_o(lock_req),
                     .lock_status_i(lock_status),
+                    .cin_running_i(cin_running),
                     
                     .train_en_o(train_en),
                     .capture_data_i(command_o));
@@ -201,8 +208,6 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     // now the CIN module looks more like the TURF side, because we don't
     // have a bitslip module. Except we integrate a bit more.
     wire [3:0] cin_rxclk;
-    // indicator that we've seen something other than a static 1
-    wire       cin_active;
     turfio_cin_surf #(.INV(INV_CIN),.CLKTYPE("RXCLK"))
         u_cin(.rxclk_i(rxclk),
               .rxclk_x2_i(rxclk_x2),
@@ -215,6 +220,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
               .delay_cntvalueout_o(delay_cntvalueout),
               .data_o(cin_rxclk),
               .data_active_o(cin_active),
+              .data_active_rst_i(cin_active_rst),
               .CIN_P(CIN_P),
               .CIN_N(CIN_N));
     
@@ -259,6 +265,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                        .lock_rst_i(lock_rst),
                        .lock_i(lock_req),
                        .locked_o(lock_status),
+                       .running_o(cin_running),
                        .cin_biterr_o(cin_err),
                        .cin_parallel_o(command_o),
                        .cin_parallel_valid_o(command_valid_o));

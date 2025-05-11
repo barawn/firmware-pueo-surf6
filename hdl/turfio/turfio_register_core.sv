@@ -67,10 +67,11 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
         output aclk_reset_o,
         input ifclk_alignerr_i,
         
-        // data active indicator. indicates a response to a train request at boot
+        // cin active indicator. indicates a response to a train request at boot
         // (i.e. we can train now)
-        input data_active_i,
-        
+        input cin_active_i,
+        output cin_active_rst_o,
+                
         // mmcm & phase shift interface
         output ps_en_o,
         input ps_done_i,
@@ -101,6 +102,7 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
         output lock_rst_o,
         output lock_req_o,
         input lock_status_i,
+        input cin_running_i,
         
         // training output
         output [1:0] train_en_o,
@@ -164,7 +166,10 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     
     ///////// STATIC CLOCK CROSS
     (* CUSTOM_CC_DST = WBCLKTYPE, ASYNC_REG = "TRUE" *)
-    reg [1:0] data_active_wbclk = 2'b00;
+    reg [1:0] cin_active_wbclk = 2'b00;
+    reg       cin_active_rst_wbclk = 0;
+    flag_sync u_cin_active_rst_sync(.in_clkA(cin_active_rst_wbclk),.out_clkB(cin_active_rst_o),
+                                    .clkA(wb_clk_i),.clkB(rxclk_i));
     
     ///////// RXCLK CLOCK CROSS HANDLING
     wire rxclk_waiting;
@@ -309,10 +314,14 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     reg bitslip = 0;
     
     reg lock_rst = 0;
+    (* CUSTOM_CC_SRC = WBCLKTYPE *)
     reg lock_req = 0;
+    (* CUSTOM_CC_DST = ACLKTYPE *)
+    reg [1:0] lock_req_aclk = {2{1'b0}};
     (* ASYNC_REG = "TRUE", CUSTOM_CC_DST = WBCLKTYPE *)
     reg [1:0] lock_status = 0;
-        
+    (* ASYNC_REG = "TRUE", CUSTOM_CC_DST = WBCLKTYPE *)
+    reg [1:0] cin_running = 0;        
     
     reg [RXCLK_FINE_PS_BITS-1:0] current_ps_value = {RXCLK_FINE_PS_BITS{1'b0}};
     reg [RXCLK_FINE_PS_BITS-1:0] target_ps_value = {RXCLK_FINE_PS_BITS{1'b0}};
@@ -323,6 +332,12 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     reg ps_incomplete = 0;
     
     
+    // okay, because we ran out of bits, we multiplex the
+    // lock status bit. if lock_req = 1, then the bit is
+    // locked. if lock_req = 0, then the bit is running.
+    // We also change lock_req from a flag to a static value:
+    // it doesn't matter because the parallelizer doesn't
+    // care if it stays static.
     wire [31:0] control_register = 
         { ps_incomplete,
           {(15-RXCLK_FINE_PS_BITS){1'b0}},
@@ -331,12 +346,14 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
           pll_align_err[1],     // 15
           pll_locked[1],        // 14
           pll_reset,            // 13
-          lock_status[1],       // 12
+          lock_req ? lock_status[1] : cin_running[1],       // 12
           lock_req,             // 11
           lock_rst,             // 10
           bitslip,              // 9
           bitslip_rst,          // 8
-          data_active_wbclk[1], // 7
+          cin_active_wbclk[1],  // 7 - on a write of 0 when 1 this is reset.
+                                //     the logic is reversed to deal with read-modify-writes.
+                                //     obviously no need to reset when it's zero already.
           train_enable,         // 6
           mmcm_locked[1],       // 5
           mmcm_rst,             // 4
@@ -356,8 +373,8 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
     assign aclk_waiting = (state == WAIT_ACK_ACLK);
     
     always @(posedge wb_clk_i) begin
-        // data active clock cross
-        data_active_wbclk <= { data_active_wbclk[0], data_active_i };
+        // cin active clock cross
+        cin_active_wbclk <= { cin_active_wbclk[0], cin_active_i };
         
         // PHASE SHIFT LOGIC
         if (target_ps_value != current_ps_value) begin
@@ -381,7 +398,11 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
                 dis_vtc <= dat_in_static[1];
                 idelayctrl_rst <= dat_in_static[2];
                 mmcm_rst <= dat_in_static[4];
-                train_enable <= dat_in_static[7:6];                
+                train_enable <= dat_in_static[6];
+                // this COULD still trip on a RMW if it becomes active
+                // in the middle of the operation, but who cares, it'll just set
+                // again immediately.
+                cin_active_rst_wbclk <= !dat_in_static[7] && cin_active_wbclk[1];
             end
             if (sel_in_static[1]) begin
                 bitslip_rst <= dat_in_static[8];
@@ -397,11 +418,14 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
             // make these guys flags
             bitslip_rst <= 1'b0;
             bitslip <= 1'b0;
-            lock_req <= 1'b0;
+            // not a flag anymore
+            //lock_req <= 1'b0;
             lock_rst <= 1'b0;
+            cin_active_rst_wbclk <= 1'b0;
         end        
         
         lock_status <= { lock_status[0], lock_status_i };
+        cin_running <= { cin_running[0], cin_running_i };
         idelayctrl_rdy <= { idelayctrl_rdy[0], idelayctrl_rdy_i };
         mmcm_locked <= { mmcm_locked[0], mmcm_locked_i };
         pll_locked <= { pll_locked[0], aclk_locked_i };
@@ -468,15 +492,20 @@ module turfio_register_core #(parameter WBCLKTYPE="PSCLK",
                                  .in_clkA(bitslip_rst),.out_clkB(bitslip_rst_o));
     flag_sync u_bitslip_sync(.clkA(wb_clk_i),.clkB(aclk_i),
                              .in_clkA(bitslip),.out_clkB(bitslip_o));
-    flag_sync u_lockreq_sync(.clkA(wb_clk_i),.clkB(aclk_i),
-                             .in_clkA(lock_req),.out_clkB(lock_req_o));                                                             
+// not a flag anymore
+//    flag_sync u_lockreq_sync(.clkA(wb_clk_i),.clkB(aclk_i),
+//                             .in_clkA(lock_req),.out_clkB(lock_req_o));                                                             
+    always @(posedge aclk_i) begin
+        lock_req_aclk <= {lock_req_aclk[0], lock_req};
+    end
+    assign lock_req_o = lock_req_aclk[1];        
     flag_sync u_lockrst_sync(.clkA(wb_clk_i),.clkB(aclk_i),
                              .in_clkA(lock_rst),.out_clkB(lock_rst_o));
                                                           
     // assign out the constants
     assign cin_rst_o = cin_rst;
     assign en_vtc_o = !dis_vtc;                             
-    assign train_en_o = train_enable;
+    assign train_en_o = {2{train_enable}};
     assign mmcm_rst_o = mmcm_rst;
     assign idelayctrl_rst_o = idelayctrl_rst;
 
