@@ -14,8 +14,10 @@ module pueo_command_decoder(
         // this lets software know that a sync was seen.
         input        wb_clk_i,
         output       rundo_sync_wbclk_o,        
+        // this lets software know that a NOOP_LIVE was seen.
+        output       runnoop_live_wbclk_o,
         
-        // Run commands
+        // Run commands. All of these are multicycle!
         output       rundo_sync_o,
         output       runrst_o,
         output       runstop_o,
@@ -85,30 +87,32 @@ module pueo_command_decoder(
     
     // Runcmd
     wire [1:0] runcmd = command_i[26 +: 2];
-    localparam [1:0] RUNCMD_NO_OP = 2'b00;
+    localparam [1:0] RUNCMD_NOOP_LIVE = 2'b00;
     localparam [1:0] RUNCMD_DO_SYNC = 2'b01;
     localparam [1:0] RUNCMD_RESET = 2'b10;
     localparam [1:0] RUNCMD_STOP = 2'b11;
-    // Qualify sync. command_valid_i is occuring in ACLK sequence 0 out of 7
-    // so these are now sequence 1 out of 7.
+    // Everything I was doing before was garbage.
+    // These all need to be multicycle for exactly the same reason the FWU
+    // stuff needs to be.
+    // command_valid_i goes high in ACLK phase 0, so when qualified,
+    // this is ACLK phase 1. It's then cleared in ACLK phase 2.
+    // So all same as FWU.
+    (* CUSTOM_MC_SRC_TAG = "RUNDO_SYNC", CUSTOM_MC_MIN = "0", CUSTOM_MC_MAX = "2.0" *)     
     reg do_rundo_sync = 0;
-    reg do_runrst = 0;    
+    (* CUSTOM_MC_SRC_TAG = "RUNRST", CUSTOM_MC_MIN = "0", CUSTOM_MC_MAX = "2.0" *) 
+    reg do_runrst = 0;
+    (* CUSTOM_MC_SRC_TAG = "RUNSTOP", CUSTOM_MC_MIN = "0", CUSTOM_MC_MAX = "2.0" *)
     reg do_runstop = 0;
-    
-    // do_rundo_sync is still a flag, so we can use it to inform
-    // wbclk without overloading rundo_sync.
-    flag_sync u_do_sync_sync(.in_clkA(do_rundo_sync),.out_clkB(rundo_sync_wbclk_o),
+    // this is a flag that a valid NOOP_LIVE was seen. It'll go a bunch, who cares.
+    reg do_live = 0;
+    flag_sync u_do_live_sync(.in_clkA(do_live),.out_clkB(runnoop_live_wbclk_o),
                              .clkA(sysclk_i), .clkB(wb_clk_i));
-    
-    // And now these are now occurring in sequence 2 out of 7, meaning
-    // that they can be captured by IFCLK and MEMCLK with their full ACLK max_delays
-    // (qualifying in memclk on phase 3)
-    
-    // So for EVERYONE these have min_delay = 8, max_delay = 0.
-    reg rundo_sync = 0;
-    reg runrst = 0;
-    reg runstop = 0;
-    
+
+    // this is a flag for informing wb_clk
+    reg sync_flag = 0;
+    flag_sync u_do_sync_sync(.in_clkA(sync_flag),.out_clkB(rundo_sync_wbclk_o),
+                             .clkA(sysclk_i), .clkB(wb_clk_i));
+
     reg pps = 0;
     
     reg fw_mark_a = 0;
@@ -121,14 +125,19 @@ module pueo_command_decoder(
             mode1_tdata <= mode1data;
             mode1_tlast <= (mode1type == MODE1TYPE_LAST);            
         end            
-        // These are flags
-        do_rundo_sync <= (runcmd == RUNCMD_DO_SYNC) && message_valid;
-        do_runrst <= (runcmd == RUNCMD_RESET) && message_valid;
-        do_runstop <= (runcmd == RUNCMD_STOP) && message_valid;
+
+        do_live <= (message_valid && runcmd == RUNCMD_NOOP_LIVE);
+
+        if (message_valid && runcmd == RUNCMD_DO_SYNC) do_rundo_sync <= 1;
+        else if (message_valid_rereg[1]) do_rundo_sync <= 0;
         
-        rundo_sync <= do_rundo_sync;
-        runrst <= do_runrst;
-        runstop <= do_runstop;
+        if (message_valid && runcmd == RUNCMD_RESET) do_runrst <= 1;
+        else if (message_valid_rereg[1]) do_runrst <= 0;
+        
+        if (message_valid && runcmd == RUNCMD_STOP) do_runstop <= 1;
+        else if (message_valid_rereg[1]) do_runstop <= 0;
+        
+        sync_flag <= (message_valid && runcmd == RUNCMD_DO_SYNC);
         
         mode1_rst <= (mode1type == MODE1TYPE_SPECIAL) && (mode1data == MODE1SPECIAL_RESET) && message_valid;
         // stretch firmware_valid. mode1_tdata is naturally stretched.
@@ -149,7 +158,7 @@ module pueo_command_decoder(
     assign fw_tvalid = firmware_valid;
     assign fw_mark_o = {fw_mark_b, fw_mark_a};
     
-    assign rundo_sync_o = rundo_sync;
-    assign runrst_o = runrst;
-    assign runstop_o = runstop;
+    assign rundo_sync_o = do_rundo_sync;
+    assign runrst_o = do_runrst;
+    assign runstop_o = do_runstop;
 endmodule
