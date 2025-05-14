@@ -14,13 +14,14 @@ module pueo_wrapper #(parameter NBITS=12,
         // aclk_sync_i are memclk_sync_i come from the sync gen
         // NOT from the command processor. These are not do_sync!
         input aclk_i,
-        input aclk_sync_i,
+        input aclk_sync_i,      // phase 0 of the 3-cycle phase
         input memclk_i,
-        input memclk_sync_i,
+        input memclk_sync_i,    // phase 0 of the 4-cycle phase
 
         // the phasing up of ifclk so that it outputs data correctly
         // is done by the axi4-stream link below
         input ifclk_i,
+        // these commands are multicycle constraints from aclk!
         input run_rst_i,
         input run_stop_i,
 
@@ -62,12 +63,10 @@ module pueo_wrapper #(parameter NBITS=12,
     assign data_vec = ch_dat_i;    
     
     // RESETS
-    // AAUUUGH - these resets come from *aclk*
-    // the run reset can go straight into aclk
-    // we flag sync the stop over to memclk
-    // and create a stretched reset for the FIFO
-    wire memclk_rst_memclk;    
+    // comes from pueo_uram_v4 when not running.
+    wire event_reset_memclk;
     // this has to hold longer b/c of the FIFO reset time for async
+    // this does NOT need a multicycle tag.
     reg addrfifo_resetb = 1;
     wire addrfifo_resetb_delayed;
     SRLC32E u_addrreset(.D(addrfifo_resetb),.CE(1'b1),.CLK(aclk_i),.Q31(addrfifo_resetb_delayed));
@@ -75,9 +74,6 @@ module pueo_wrapper #(parameter NBITS=12,
         if (run_stop_i) addrfifo_resetb <= 1'b0;
         else if (!addrfifo_resetb_delayed) addrfifo_resetb <= 1'b1;
     end        
-    // timing doesn't matter
-    flag_sync u_memclk_rst(.in_clkA(run_stop_i),.out_clkB(memclk_rst_memclk),
-                           .clkA(aclk_i),.clkB(memclk_i));
 
     // signal from SIGBUF to EVBUF
     wire begin_readout;
@@ -95,20 +91,21 @@ module pueo_wrapper #(parameter NBITS=12,
                          .s_axis_aresetn( addrfifo_resetb ),
                          `CONNECT_AXI4S_MIN_IF( s_axis_ , addrin_ ),
                          `CONNECT_AXI4S_MIN_IF( m_axis_ , addr_ ));
-
-    // pueo_uram_v3 should handle passing trigger $#!+ over
-    // to the event buffer!!        
-    wire [14:0] trig_time_ifclk;
-    wire [15:0] trig_num_ifclk;
-    wire        trig_valid_ifclk;
+                         
+    reg [15:0] trig_num = {16{1'b0}};
+    always @(posedge aclk_i) begin
+        if (run_rst_i) trig_num <= {16{1'b0}};
+        else if (trig_time_valid_i) trig_num <= trig_num + 1;
+    end
 
     pueo_uram_v4 #(.SCRAMBLE_OPT("TRUE"))
-        uut(.aclk(aclk_i),
-            .aclk_rst_i(run_rst_i),
+        uut(.aclk(aclk_i),            
             .aclk_sync_i(aclk_sync_i),
             .memclk(memclk_i),
-            .memclk_rst_i(memclk_rst_memclk),
             .memclk_sync_i(memclk_sync_i),
+            .run_rst_i(run_rst_i),
+            .run_stop_i(run_stop_i),
+            .event_rst_o(event_reset_memclk),
             .dat_i(data_vec),
             .begin_o(begin_readout),
             .dat_o(dout_vec),
@@ -123,15 +120,15 @@ module pueo_wrapper #(parameter NBITS=12,
                       .clkA(aclk_i),.clkB(ifclk_i));                      
     // OH DEAR GOD THIS IS AWKWARD!!
     uram_event_buffer_v3 u_evbuf( .memclk_i(memclk_i),
-                               .memclk_rst_i(memclk_rst_memclk),
+                               .memclk_rst_i(event_reset_memclk),
                                .ifclk_i(ifclk_i),
                                .ifclk_rst_i(),
                                .begin_i(begin_readout),
                                .dat_i(dout_vec),
                                .dat_valid_i(dout_valid),
-                               .trig_time_i(trig_time_ifclk),
-                               .event_no_i(trig_num_ifclk),
-                               .trig_valid_i(trig_valid_ifclk),
+                               .trig_time_i(trig_time_i),
+                               .event_no_i(trig_num),
+                               .trig_valid_i(trig_time_valid_i),
                                .dout_data_o(dout_data_o),
                                .dout_data_valid_o(dout_data_valid_o),
                                .dout_data_phase_i(dout_data_phase_i),
