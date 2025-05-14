@@ -59,6 +59,8 @@
 module surf_sync_gen(
         input           aclk_i,
         input           aclk_phase_i,
+        // this is a stretched signal occuring in aclk phase 1/3
+        // each dest needs qualifier tags
         input           sync_req_i,
         input [4:0]     sync_offset_i,
         input           memclk_i,
@@ -90,13 +92,19 @@ module surf_sync_gen(
     (* CUSTOM_CC_DST = IFCLKTYPE *)
     reg [4:0] sync_offset_ifclk = {5{1'b0}};
     
+    // capture rundo_sync in ifclk.
+    (* CUSTOM_MC_DST_TAG = "RUNDO_SYNC" *)
+    reg rundo_sync_ifclk = 0;
+    
     // ifclk phase counter. Copied from TURFIO.
     reg [4:0] clk_phase_counter = {5{1'b0}};    
+
     // this indicates the *next* ifclk cycle should
     // have sync = 1. We use this multiple places so we register it.
     // Normally sync would toggle on clk_phase_counter[3:0] == 15
     // so this is high on clk_phase_counter == 14.
-    (* CUSTOM_MC_SRC_TAG = "SYNC", CUSTOM_MC_MIN = "0.0", CUSTOM_MC_MAX = "8.0" *)
+    // These are always specified in source clock periods.
+    (* CUSTOM_MC_SRC_TAG = "SYNC", CUSTOM_MC_MIN = "0.0", CUSTOM_MC_MAX = "1.0" *)
     reg sync_is_next = 0;
         
     // debug, for visibility
@@ -106,7 +114,7 @@ module surf_sync_gen(
     reg debug_sync2 = 0;
     
     wire do_sync_out;
-    SRLC32E u_syncdelay(.D(sync_req_i),
+    SRLC32E u_syncdelay(.D(rundo_sync_ifclk),
                         .CE(1'b1),
                         .CLK(ifclk_i),
                         .A(sync_offset_ifclk),
@@ -116,6 +124,8 @@ module surf_sync_gen(
     // we know replicates the SURF clock. So this
     // could actually be used as the PL SYSREF.
     always @(posedge ifclk_i) begin
+        rundo_sync_ifclk <= sync_req_i;
+        
         sync_offset_ifclk <= sync_offset_i;
 
         sync_is_next <= (clk_phase_counter == 14);
