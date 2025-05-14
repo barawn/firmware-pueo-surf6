@@ -73,7 +73,9 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
         // the input here just becomes valid every
         // other clock until the last
         input ifclk_i,
-        // trigger time input
+        // these are *aclk* not *memclk*
+        input aclk_i,
+        input aclk_rst_i,
         input [14:0] trig_time_i,
         input [15:0] event_no_i,
         input        trig_valid_i,
@@ -89,8 +91,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
         output       dout_data_valid_o,
         output       dout_data_last_o,
         input        dout_data_phase_i
-    );
-    
+    );        
     // whatever!! I'll figure out write error later
     // or maybe never at all
     assign write_error_o = 1'b0;
@@ -326,9 +327,11 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     // in the trig time is unused, we set it equal to 1 which allows
     // the DOUT path to automatically know when an event starts because
     // it looks for a 1 in the top bit when it's IDLE.
-    event_hdr_fifo u_hdr_fifo(.wr_clk(memclk_i),
+    //
+    // this is aclk, not memclk!
+    event_hdr_fifo u_hdr_fifo(.wr_clk(aclk_i),
                               .rd_clk(ifclk_i),
-                              .rst( memclk_rst_i ),
+                              .rst( aclk_rst_i ),
                               .din( { 1'b1, trig_time_i, event_no_i } ),
                               .wr_en(trig_valid_i),
                               .full(),
@@ -485,6 +488,12 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     wire [23:0] fw_bram_en;    
     generate
         if (DEBUG == "TRUE") begin : ILA
+            event_ila u_ila(.clk(ifclk_i),
+                            .probe0(header_data),
+                            .probe1(event_data),
+                            .probe2(select_header_data),
+                            .probe3(header_valid),
+                            .probe4(dout_data_phase));
             // sigh, silly debugging.
             // 24 bit enable
             // 8 bit data
