@@ -11,7 +11,8 @@ module surf_id_ctrl(
         output [4:0] sync_offset_o,
         
         input rundo_sync_i,
-        
+        input runnoop_live_i,
+            
         // data from TURFIO
         input hsk_rx_i,
         // data to TURFIO
@@ -62,10 +63,11 @@ module surf_id_ctrl(
     reg rackclk_was_ok = 0;
 
     reg rundo_sync_seen = 0;
+    reg runnoop_live_seen = 0;
     
     // top 8 bits are a global stat: top bit is TURFIO ready
     wire [31:0] ctrlstat_reg = { rackclk_ok_o, {6{1'b0}}, watchdog_trigger_enable,
-                                 rundo_sync_seen, {2{1'b0}}, sync_offset, // 23:16
+                                 rundo_sync_seen, runnoop_live_seen, {1{1'b0}}, sync_offset, // 23:16
                                  ctrlstat_gpi,      // 15:8
                                  ctrlstat_gpo };    // 7:0
     
@@ -184,6 +186,9 @@ module surf_id_ctrl(
     always @(posedge wb_clk_i) begin
         if (sel_ctrlstat && wb_we_i && wb_ack_o && wb_sel_i[2] && wb_dat_i[23]) rundo_sync_seen <= 1'b0;
         else if (rundo_sync_i) rundo_sync_seen <= 1'b1;
+    
+        if (sel_ctrlstat && wb_we_i && wb_ack_o && wb_sel_i[2] && wb_dat_i[22]) runnoop_live_seen <= 1'b0;
+        else if (runnoop_live_i) runnoop_live_seen <= 1'b1;
     
         rackclk_was_ok <= rackclk_ok_o;
         if (watchdog_trigger_enable && (rackclk_was_ok && !rackclk_ok_o))
