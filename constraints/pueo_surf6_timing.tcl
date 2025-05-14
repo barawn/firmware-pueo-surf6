@@ -275,6 +275,10 @@ set_mc_paths URAM_RESET
 set_mc_paths FW_VALID
 set_mc_paths FW_DATA
 
+set_mc_paths RUNDO_SYNC
+set_mc_paths RUNRST
+set_mc_paths RUNSTOP
+
 set_mc_paths SYNC
 
 #################################################################
