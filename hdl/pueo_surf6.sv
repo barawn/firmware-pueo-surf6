@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd1,
-                    parameter [7:0] VER_REV = 8'd6,
+                    parameter [7:0] VER_REV = 8'd9,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -270,8 +270,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire ifclk_sync;
     (* KEEP = "TRUE" *)
     wire memclk_sync;
-    // indicates in a register whether any sync has been seen (so we can do MTS-y stuff).
+    // indicates in a register whether any sync has been seen. this should always be set if NOOP_LIVE is seen
+    // but whatevers
     wire wbclk_do_sync;
+    // indicates in a register whether a valid NOOP_LIVE has been seen.
+    wire wbclk_noop_live;
     
     wire ifclk_locked;
     wire memclk_locked;
@@ -467,6 +470,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            
                                            .wb_clk_i(wb_clk),
                                            .rundo_sync_wbclk_o(wbclk_do_sync),
+                                           .runnoop_live_wbclk_o(wbclk_noop_live),
                                            
                                            .rundo_sync_o(run_dosync),
                                            .runrst_o(run_reset),
@@ -575,6 +579,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                   .rackclk_i(rackclk),
                   
                   .rundo_sync_i(wbclk_do_sync),
+                  .runnoop_live_i(wbclk_noop_live),
                   
                   .gpi_i(idctrl_gpi),
                   .gpo_o(idctrl_gpo),
