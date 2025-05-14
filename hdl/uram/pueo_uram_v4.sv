@@ -57,19 +57,19 @@ module pueo_uram_v4 #(
                    parameter SCRAMBLE_OPT = "TRUE",
                    parameter READOUT_PHASE = 0)(
         input aclk,
-        input aclk_sync_i,
-        // aclk reset resets the *write* portion of the URAM:
-        // this needs to be synchronous across the whole
-        // experiment since it starts up the counters.
-        input aclk_rst_i,
+        input aclk_sync_i,  // phase 0 of the 3 cycle phase
         input [NCHAN*NSAMP*NBIT-1:0] dat_i,
 
         input memclk,
-        // memclk_rst_i resets the *read* portion of the URAM.
-        // Essentially memclk_rst_i *stops* runs, and aclk_rst_i
-        // *starts* runs.
-        input memclk_rst_i,
-        input memclk_sync_i,
+        input memclk_sync_i,    // phase 1 of the 4 cycle phase
+
+        // run commands - these come from the command
+        // decoder and are active in aclk phase 1 and 2
+        input run_rst_i,
+        input run_stop_i,
+
+        // this resets the event buffer and addrfifo
+        output event_rst_o,
 
         // input REQUEST
         input [ADDRBITS-1:0] s_axis_tdata,
@@ -90,75 +90,60 @@ module pueo_uram_v4 #(
     localparam RDCNTLEN = $clog2(RDLEN);            
 
     localparam NMEMSAMP = NSAMP*3/4;
+
+    // We are the **URAM** module. The only thing
+    // we need to worry about is memclk starting.
     
-    reg               aclk_reset_seen = 0;
-    // this signal is launched at 2 points in an 8 ns functional period:
-    // time t = 2.6667 ns
-    //      t = 0 ns
-    // it is always captured at time t = 0 ns
-    // this means minimum delay is 0 ns (0 clocks), and maximum delay is 5.3333 ns (2 clocks)
-    (* CUSTOM_MC_SRC_TAG = "URAM_RESET", CUSTOM_MC_MIN = 0, CUSTOM_MC_MAX = 2 *)
-    reg               aclk_reset = 0;
-    reg               aclk_reset_rereg = 0;
-    (* CUSTOM_MC_DST_TAG = "URAM_RESET" *)
-    reg               write_reset = 0;
+    // captures the write reset - active in phase 0/3
+    (* CUSTOM_MC_DST_TAG = "RUNRST RUNSTOP" *)
+    reg do_write_reset = 0;
+
+    (* CUSTOM_MC_DST_TAG = "RUNRST RUNSTOP" *)    
     reg               running = 0;
+    
+    assign event_rst_o = !running;
+    
     
     reg reading = 0;
     reg read_start = 0;
     wire read_complete;
     wire read_active;
     wire [ADDRLEN-1:0] read_addr;
-        
-    reg [2:0] aclk_phase = {3{1'b0}};
-    reg [3:0] memclk_phase = {4{1'b0}};
-    always @(posedge aclk) begin
-        aclk_phase <= { aclk_phase[1], aclk_sync_i, aclk_phase[2] };
 
-        if (aclk_reset) aclk_reset_seen <= 1'b0;
-        else if (aclk_rst_i) aclk_reset_seen <= 1'b1;
-        // aclk_reset[0] now goes high in phase 1 (tick 4) and low in phase 0 (tick 0)
-        // it's qualified by memclk phase 2, so captured at tick 9
-        // so min delay -3, max delay 5 (b/c it's high for 8 ticks)
-        // the memclk reset then goes high in 3, and resets at the same phase 0
-        // as aclk_reset_rereg indicates.
-        // phase    aclk_reset_seen     aclk_reset[0]   aclk_reset_rereg
-        // 0        0                   0               0
-        // 1        1                   0               0
-        // 2        1                   0               0
-        // 0        1                   0               0
-        // 1        1                   1               0
-        // 2        0                   1               1
-        // 0        0                   0               0
-        // the 2-clock stretch is needed.
-        if (aclk_phase[0]) aclk_reset <= aclk_reset_seen;
-        else if (aclk_phase[2]) aclk_reset <= 1'b0;
-        // i dunno if we'll ever use this
-        aclk_reset_rereg <= aclk_reset && aclk_reset_seen;
-    end
+    // phase tracks        
+    reg [3:0] memclk_phase = {4{1'b0}};
 
     always @(posedge memclk) begin
+        // memclk_sync_i runs in phase 0 so clocking it generates phase 1
         memclk_phase <= { memclk_phase[2:1], memclk_sync_i, memclk_phase[3] };
-        // this might be too hard: we might need to be more clever
-        write_reset <= memclk_phase[2] && aclk_reset;
-        if (write_reset) running <= 1'b1;        
+
+        // write reset is active in phase 0, however we don't really want to
+        // start writing off-phase, so both of these will be requalified.
+        // this means that this is a 4-clock stretch (or IFCLK equivalent!)
+        if (memclk_phase[3]) do_write_reset <= run_rst_i;
+
+        // running needs to set up before the actual write stuff starts!!
+        if (memclk_phase[3]) begin
+            if (run_rst_i) running <= 1;
+            else if (run_stop_i) running <= 0;
+        end            
 
         // we need to align the readout to the memclk_phase.
         // This means we end up taking a little longer to read out
         // than we did to write in, but the amount is small.
         // It doesn't actually really matter *what phase* we align
         // to, we just have to KNOW what it is.
-
         if (read_complete) reading <= 1'b0;
         else if (s_axis_tvalid && s_axis_tready) reading <= 1'b1;
         
         read_start <= (s_axis_tvalid && s_axis_tready);
     end
+    
     // trim the bottom 2 bits and force them to 0.
     uram_read_counter #(.COUNT_MAX(RDLEN),
                         .ADDR_BITS(ADDRLEN))
         u_counter( .clk_i(memclk),
-                   .rst_i(memclk_rst_i),
+                   .rst_i(!running),
                     .start_addr_i( {s_axis_tdata[2 +: (ADDRLEN-2)],2'b00} ),
                     .run_i(read_start),
                     .addr_valid_o(read_active),
@@ -277,12 +262,22 @@ module pueo_uram_v4 #(
             // and reregister or something. Helpful thing is that
             // because we always reset at phase 0 the low 2 bits are ALWAYS
             // the same thing as the phase counter in the sync transfer.
+            
+            // write_addr ALWAYS increments by 1.
+            // In the trigger, the trigger address increments by 4
+            // every 3 because that's the relationship between the two.
+            // (which of course means the bottom 2 bits are pointless).
             reg [ADDRLEN-1:0] write_addr = {ADDRLEN{1'b0}};
             reg sleeping = 1;
             
+            // we still reset to 0, we just compensate for the
+            // extra bit in the TURF. We need to time out
+            // the start anyway.
+            localparam [ADDRLEN-1:0] WRITE_RESET_VALUE = 0;
+            
             always @(posedge memclk) begin
                 sleeping <= ~running;
-                if (write_reset) write_addr <= {ADDRLEN{1'b0}};
+                if (do_write_reset && memclk_phase[3]) write_addr <= WRITE_RESET_VALUE;
                 else write_addr <= write_addr + 1;
             end
             
