@@ -6,6 +6,7 @@ ip/fifo/cmd_fifo/cmd_fifo.xci
 ip/fifo/cmd_rxtx_fifo/cmd_rxtx_fifo.xci
 ip/debug/cobs_ila/cobs_ila.xci
 ip/uram/event_hdr_fifo/event_hdr_fifo.xci
+ip/debug/event_ila/event_ila.xci
 ip/fifo/fw_fifo/fw_fifo.xci
 ip/debug/fwupd_ila/fwupd_ila.xci
 ip/clock/ifclk_pll/ifclk_pll.xci
