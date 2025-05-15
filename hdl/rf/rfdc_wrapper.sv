@@ -4,7 +4,8 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
                       parameter NCLKS=4,
                       parameter NCHAN=8,
                       parameter NSAMP=8,
-                      parameter NBITS=12)(
+                      parameter NBITS=12,
+                      parameter DEBUG="TRUE")(
         input wb_clk_i,
         input wb_rst_i,
         `TARGET_NAMED_PORTS_WB_IF( wb_ , 18, 32 ),
@@ -110,12 +111,26 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
     end    
 
     wire [RFDC_BITS*NSAMP-1:0] adc_vec[NCHAN-1:0];
-
+    wire [NBITS-1:0] dbg_vec[NCHAN-1:0][NSAMP-1];
+        
     generate
         genvar ch,smp;
+        if (DEBUG == "TRUE") begin : ILA
+            raw_ila u_ila(.clk(aclk),
+                          .probe0(dbg_vec[0][0]),
+                          .probe1(dbg_vec[0][1]),
+                          .probe2(dbg_vec[0][2]),
+                          .probe3(dbg_vec[0][3]),
+                          .probe4(dbg_vec[0][4]),
+                          .probe5(dbg_vec[0][5]),
+                          .probe6(dbg_vec[0][6]),
+                          .probe7(dbg_vec[0][7]));
+        end
         // yoink the valid bits
         for (ch=0;ch<NCHAN;ch=ch+1) begin : MCH
             for (smp=0;smp<NSAMP;smp=smp+1) begin : MSMP 
+                assign dbg_vec[ch][smp] =
+                    adc_vec[ch][RFDC_BITS*smp + (RFDC_BITS-NBITS) +: NBITS];
                 assign adc_dout[NBITS*NSAMP*ch+NBITS*smp +: NBITS] =
                     adc_vec[ch][RFDC_BITS*smp + (RFDC_BITS-NBITS) +: NBITS];
             end
