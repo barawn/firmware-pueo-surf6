@@ -17,6 +17,7 @@ ip/interphi/interphi_ibert10/interphi_ibert10.xci
 ip/debug/lock_ila/lock_ila.xci
 ip/clock/memclk_pll/memclk_pll.xci
 ip/debug/rackctl_ila/rackctl_ila.xci
+ip/debug/raw_ila/raw_ila.xci
 ip/rf/rfdc_gen1/rfdc_gen1.xci
 ip/rf/rfdc_gen3/rfdc_gen3.xci
 ip/clock/sysclk_wiz/sysclk_wiz.xci
