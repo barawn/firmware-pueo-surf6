@@ -321,8 +321,14 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     wire header_data_valid;
     wire header_data_read;
     wire select_header_data;
-    // read top byte first
-    wire [1:0] header_data_addr = ~bram_raddr[1:0];
+    // sigh. this crap actually goes 5 6 7 4 or 1 2 3 0
+    // so I can't just flip things.
+    wire [7:0] header_data_remap[3:0];
+    assign header_data_remap[0] = header_data[0 +: 8];
+    assign header_data_remap[1] = header_data[24 +: 8];
+    assign header_data_remap[2] = header_data[16 +: 8];
+    assign header_data_remap[3] = header_data[8 +: 8];
+    wire [1:0] header_data_addr = bram_raddr[1:0];
     // The headers go in with the trig time first. Because the top bit
     // in the trig time is unused, we set it equal to 1 which allows
     // the DOUT path to automatically know when an event starts because
@@ -383,7 +389,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
         
         if (dout_data_phase_i) begin
             // FIX THIS REVERSE THE ORDER
-            if (select_header_data) event_data <= `DLYFF header_data[8*header_data_addr[1:0] +: 8];
+            if (select_header_data) event_data <= `DLYFF header_data_remap[header_data_addr[1:0]];
             else event_data <= `DLYFF last_data;
         end
 //        if (dout_data_phase_i) begin
@@ -492,8 +498,8 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
                             .probe0(header_data),
                             .probe1(event_data),
                             .probe2(select_header_data),
-                            .probe3(header_valid),
-                            .probe4(dout_data_phase));
+                            .probe3(header_data_valid),
+                            .probe4(dout_data_phase_i));
             // sigh, silly debugging.
             // 24 bit enable
             // 8 bit data
