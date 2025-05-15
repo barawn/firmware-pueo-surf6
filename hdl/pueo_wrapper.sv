@@ -65,6 +65,8 @@ module pueo_wrapper #(parameter NBITS=12,
     // RESETS
     // comes from pueo_uram_v4 when not running.
     wire event_reset_memclk;
+    wire event_reset_aclk;
+    
     // this has to hold longer b/c of the FIFO reset time for async
     // this does NOT need a multicycle tag.
     reg addrfifo_resetb = 1;
@@ -106,6 +108,7 @@ module pueo_wrapper #(parameter NBITS=12,
             .run_rst_i(run_rst_i),
             .run_stop_i(run_stop_i),
             .event_rst_o(event_reset_memclk),
+            .event_rst_aclk_o(event_reset_aclk),
             .dat_i(data_vec),
             .begin_o(begin_readout),
             .dat_o(dout_vec),
@@ -121,6 +124,8 @@ module pueo_wrapper #(parameter NBITS=12,
     // OH DEAR GOD THIS IS AWKWARD!!
     uram_event_buffer_v3 u_evbuf( .memclk_i(memclk_i),
                                .memclk_rst_i(event_reset_memclk),
+                               .aclk_i(aclk_i),
+                               .aclk_rst_i(event_reset_aclk),
                                .ifclk_i(ifclk_i),
                                .ifclk_rst_i(),
                                .begin_i(begin_readout),
