@@ -70,6 +70,7 @@ module pueo_uram_v4 #(
 
         // this resets the event buffer and addrfifo
         output event_rst_o,
+        output event_rst_aclk_o,
 
         // input REQUEST
         input [ADDRBITS-1:0] s_axis_tdata,
@@ -101,8 +102,11 @@ module pueo_uram_v4 #(
     (* CUSTOM_MC_DST_TAG = "RUNRST RUNSTOP" *)    
     reg               running = 0;
     
-    assign event_rst_o = !running;
+    (* CUSTOM_MC_DST_TAG = "RUNRST RUNSTOP" *)
+    reg               running_aclk = 0;
     
+    assign event_rst_o = !running;
+    assign event_rst_aclk_o = !running_aclk;    
     
     reg reading = 0;
     reg read_start = 0;
@@ -112,7 +116,16 @@ module pueo_uram_v4 #(
 
     // phase tracks        
     reg [3:0] memclk_phase = {4{1'b0}};
-
+    reg [2:0] aclk_phase = {3{1'b0}};
+    
+    always @(posedge aclk) begin
+        aclk_phase <= { aclk_phase[1], aclk_sync_i, aclk_phase[2] };
+        if (aclk_phase[2]) begin
+            if (run_rst_i) running_aclk <= 1;
+            else if (run_stop_i) running_aclk <= 0;
+        end            
+    end
+    
     always @(posedge memclk) begin
         // memclk_sync_i runs in phase 0 so clocking it generates phase 1
         memclk_phase <= { memclk_phase[2:1], memclk_sync_i, memclk_phase[3] };
