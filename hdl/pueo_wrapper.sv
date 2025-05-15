@@ -24,8 +24,6 @@ module pueo_wrapper #(parameter NBITS=12,
         // these commands are multicycle constraints from aclk!
         input run_rst_i,
         input run_stop_i,
-
-        input ifclk_x2_i,
         
         input [NBITS*NSAMP*NCHAN-1:0] ch_dat_i,
         

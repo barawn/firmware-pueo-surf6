@@ -775,7 +775,6 @@ module pueo_surf6 #(parameter IDENT="SURF",
                         .memclk_sync_i(memclk_phase),
                         
                         .ifclk_i(ifclk),
-                        .ifclk_x2_i(ifclk_x2),
                         
                         .ch_dat_i(adc_dout),
                                                 
