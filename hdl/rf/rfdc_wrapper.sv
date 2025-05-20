@@ -111,7 +111,7 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
     end    
 
     wire [RFDC_BITS*NSAMP-1:0] adc_vec[NCHAN-1:0];
-    wire [NBITS-1:0] dbg_vec[NCHAN-1:0][NSAMP-1];
+    wire [NBITS-1:0] dbg_vec[NCHAN-1:0][NSAMP-1:0];
         
     generate
         genvar ch,smp;
