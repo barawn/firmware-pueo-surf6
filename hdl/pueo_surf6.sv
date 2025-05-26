@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd1,
-                    parameter [7:0] VER_REV = 8'd13,
+                    parameter [7:0] VER_REV = 8'd14,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -250,10 +250,22 @@ module pueo_surf6 #(parameter IDENT="SURF",
     OBUFT u_nready_obuf(.I(1'b0),.T(~clocks_ready),.O(READY_B));
     assign FP_LED = idctrl_gpo[2:1];
     assign CAL_SEL_B = ~idctrl_gpo[3];
-    assign SEL_CAL = idctrl_gpo[4];
-    // CALEN is !SHDN so if SEL_CAL is low, shut it off.
-    assign CALEN = !idctrl_gpo[4];
-    assign SEL_CAL_B = ~idctrl_gpo[4];
+    // OMFG YOU IDIOT:
+    // U13 (and all the other SKY13323s have:
+    // P2 = SIGNAL INPUT
+    // P1 = CAL INPUT
+    // SELCAL = VCTL2
+    // SELCAL_B = VCTL1
+    // But the truth table for SKY13323 is
+    //                  VCTL1(SELCAL_B)       VCTL2(SELCAL)
+    // P2 to COM        0                       1
+    // P1 to COM        1                       0
+    // 
+    // meaning SEL_CAL needs to be idctrl_gpo[4] INVERTED, YOU IDIOT
+    assign SEL_CAL = ~idctrl_gpo[4];
+    assign SEL_CAL_B = idctrl_gpo[4];
+    // NO dumbass if idctrl_gpo[4] is LOW we want SHDN = 1 so !SHDN = 0
+    assign CALEN = idctrl_gpo[4];
     (* CUSTOM_CC_DST = "SYSREFCLK" *)
     BUFGCE #(.CE_TYPE("SYNC")) u_aclk_bufg(.I(aclk_in),.O(aclk),.CE(clocks_ready));
             
