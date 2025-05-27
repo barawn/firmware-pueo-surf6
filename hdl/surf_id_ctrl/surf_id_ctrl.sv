@@ -40,7 +40,7 @@ module surf_id_ctrl(
     parameter WB_CLK_TYPE = "PSCLK";
     parameter NUM_GPO = 8;
     parameter NUM_GPI = 8;
-    
+    parameter [4:0] SYNC_OFFSET_DEFAULT = 7;
     parameter WB_ADR_BITS = 11;
     
     wire dna_data;
@@ -51,9 +51,9 @@ module surf_id_ctrl(
     (* CUSTOM_CC_DST = WB_CLK_TYPE *)
     reg [NUM_GPI-1:0] ctrlstat_gpi = {NUM_GPI{1'b0}};
     
-    
+    // This is standardized now
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
-    reg [4:0] sync_offset = {5{1'b0}};
+    reg [4:0] sync_offset = SYNC_OFFSET_DEFAULT;
 
     // watchdog fun
     reg watchdog_trigger_enable = 0;
