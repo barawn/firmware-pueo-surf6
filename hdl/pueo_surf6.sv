@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd1,
-                    parameter [7:0] VER_REV = 8'd14,
+                    parameter [7:0] VER_REV = 8'd15,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -122,6 +122,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam [31:0] DATEVERSION = { (REVISION=="B" ? 1'b1 : 1'b0),FIRMWARE_DATE[14:0], FIRMWARE_VERSION };
 
     localparam NUM_GPO = 8;
+    
+    // determined empirically
+    localparam [4:0] SYNC_OFFSET_DEFAULT = 7;
     
     // This is the WISHBONE clock. Right now we're using the PS clock.
     wire wb_clk;
@@ -505,7 +508,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // sync generation
     wire [4:0] sync_offset; // from idctrl
     
-    surf_sync_gen u_syncgen(.aclk_i(aclk),
+    surf_sync_gen #(.SYNC_OFFSET_DEFAULT(SYNC_OFFSET_DEFAULT))
+                  u_syncgen(.aclk_i(aclk),
                             .aclk_phase_i(aclk_phase),
                             .sync_req_i(run_dosync),
                             .sync_offset_i(sync_offset),
@@ -582,7 +586,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
         
     surf_id_ctrl #(.VERSION(DATEVERSION),
                    .WB_CLK_TYPE(WB_CLK_TYPE),
-                   .NUM_GPO(NUM_GPO))
+                   .NUM_GPO(NUM_GPO),
+                   .SYNC_OFFSET_DEFAULT(SYNC_OFFSET_DEFAULT))
         u_id_ctrl(.wb_clk_i(wb_clk),
                   .wb_rst_i(1'b0),
                   `CONNECT_WBS_IFM(wb_ , surf_id_ctrl_ ),
