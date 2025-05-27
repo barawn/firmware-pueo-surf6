@@ -83,14 +83,14 @@ module surf_sync_gen(
         // ifclk domain.
         output          sync_ifclk_o                
     );
-    
+    parameter [4:0] SYNC_OFFSET_DEFAULT = 7;
     parameter ACLKTYPE = "SYSREFCLK";
     parameter IFCLKTYPE = "IFCLK";
     parameter USE_IOB = "TRUE";
     parameter USE_IOB2 = "TRUE";    
     // this does. not. matter.
     (* CUSTOM_CC_DST = IFCLKTYPE *)
-    reg [4:0] sync_offset_ifclk = {5{1'b0}};
+    reg [4:0] sync_offset_ifclk = SYNC_OFFSET_DEFAULT;
     
     // capture rundo_sync in ifclk.
     (* CUSTOM_MC_DST_TAG = "RUNDO_SYNC" *)
