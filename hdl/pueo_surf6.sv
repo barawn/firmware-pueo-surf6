@@ -15,8 +15,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
-                    parameter [3:0] VER_MINOR = 4'd1,
-                    parameter [7:0] VER_REV = 8'd15,
+                    parameter [3:0] VER_MINOR = 4'd2,
+                    parameter [7:0] VER_REV = 8'd0,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -395,7 +395,10 @@ module pueo_surf6 #(parameter IDENT="SURF",
 
     // ok, here we go, folks
     wire rfdc_bridge_err;
-    reg sysref_pl = 1'b0;
+    wire sysref_pl;
+    rfdc_sync u_sysref_sync(.sysclk_i(aclk),
+                            .sysref_i(pl_sysref),
+                            .pl_sysref_o(sysref_pl));        
     localparam NCHAN = 8;
     localparam NSAMP = 8;
     localparam NBITS = 12;
@@ -743,7 +746,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // emio 9/8 is an interrupt (fwmarked[0]) (output)
     assign emio_gpio_i[8] = emio_fwupdate[0];
     assign emio_gpio_i[9] = emio_fwupdate[1];
-    // emio 10-11 are interrupts
+    // emio 10-11 are isolated wake-uppable interrupts
     assign emio_gpio_i[11:10] = {2{1'b0}};
     
     // emio 15-12 are inputs: 12 is fwdone[0]

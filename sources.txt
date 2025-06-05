@@ -55,3 +55,4 @@ hdl/surf6_mode1_monitor.sv
 hdl/uram/fwupd_uaddr.sv
 verilog-library-barawn/hdl/obuftds_autoinv.v
 hdl/turfio/turfio_cout.sv
+hdl/rf/rfdc_sync.sv
