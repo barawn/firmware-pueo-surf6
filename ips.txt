@@ -20,6 +20,7 @@ ip/debug/rackctl_ila/rackctl_ila.xci
 ip/debug/raw_ila/raw_ila.xci
 ip/rf/rfdc_gen1/rfdc_gen1.xci
 ip/rf/rfdc_gen3/rfdc_gen3.xci
+ip/debug/rfdc_sync_ila/rfdc_sync_ila.xci
 ip/clock/sysclk_wiz/sysclk_wiz.xci
 ip/debug/turfio_cin_ila/turfio_cin_ila.xci
 ip/debug/uart_ila/uart_ila.xci
