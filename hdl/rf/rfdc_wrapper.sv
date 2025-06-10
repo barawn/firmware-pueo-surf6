@@ -49,6 +49,11 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
     // the WB->AXI bridge is
     // assert awvalid && wvalid
 
+    (* CUSTOM_CC_DST = "SYSREFCLK" *)
+    reg [1:0] local_areset = {2{1'b1}};
+    always @(posedge aclk) begin
+        local_areset <= { local_areset[0], !aresetn };
+    end        
     reg axi_writing = 0;
     reg axi_waddr_accepted = 0;
     reg axi_wdata_accepted = 0;
@@ -254,15 +259,15 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
                         .user_sysref_adc(sysref_pl_i),
                         .user_sysref_dac(sysref_dac_i),
                         // interface clocks
-                        .m0_axis_aresetn(1'b1),
+                        .m0_axis_aresetn(!local_areset[1]),
                         .m0_axis_aclk(aclk),
-                        .m1_axis_aresetn(1'b1),
+                        .m1_axis_aresetn(!local_areset[1]),
                         .m1_axis_aclk(aclk),
-                        .m2_axis_aresetn(1'b1),
+                        .m2_axis_aresetn(!local_areset[1]),
                         .m2_axis_aclk(aclk),
-                        .m3_axis_aresetn(1'b1),
+                        .m3_axis_aresetn(!local_areset[1]),
                         .m3_axis_aclk(aclk),
-                        .s0_axis_aresetn(1'b1),
+                        .s0_axis_aresetn(!local_areset[1]),
                         .s0_axis_aclk(aclk),
                         .m00_axis_tdata( adc_vec[0] ),
                         .m00_axis_tready(1'b1),
