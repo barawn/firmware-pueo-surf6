@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd2,
-                    parameter [7:0] VER_REV = 8'd0,
+                    parameter [7:0] VER_REV = 8'd3,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -69,6 +69,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
         // data output
         output DOUT_P,      // L5N AN17
         output DOUT_N,      // L5P AM17
+        // pulse output
+        output PULSE_P,     // L2N AN15
+        output PULSE_N,     // L2P AM15
         // Test points
         output TP2,
         output TP3,
@@ -396,8 +399,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // ok, here we go, folks
     wire rfdc_bridge_err;
     wire sysref_pl;
+    wire [15:0] sysref_phase;
+    wire rfdc_reset;
     rfdc_sync u_sysref_sync(.sysclk_i(aclk),
+                            .ifclk_i(ifclk),
+                            .sysclk_sync_i(sync),
                             .sysref_i(pl_sysref),
+                            .sysref_phase_o(sysref_phase),
                             .pl_sysref_o(sysref_pl));        
     localparam NCHAN = 8;
     localparam NSAMP = 8;
@@ -409,7 +417,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 `CONNECT_WBS_IFM( wb_ , rfdc_ ),
                 .bridge_err_o(rfdc_bridge_err),
                 .aclk(aclk),
-                .aresetn(1'b1),
+                .aresetn(!rfdc_reset),
                 .sysref_p(SYSREF_P),
                 .sysref_n(SYSREF_N),
                 .sysref_pl_i(sysref_pl),
@@ -602,6 +610,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
                   
                   .rundo_sync_i(wbclk_do_sync),
                   .runnoop_live_i(wbclk_noop_live),
+                  
+                  .sysref_phase_i(sysref_phase),
+                  .rfdc_rst_o(rfdc_reset),
                   
                   .gpi_i(idctrl_gpi),
                   .gpo_o(idctrl_gpo),
@@ -888,5 +899,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            .gtp_mgtaltclk_i(gtp_mgtaltclk));
         end
     endgenerate
-                              
+
+    wire pulse;
+    ODDRE1 #(.SRVAL(1'b1)) u_pulse(.C(aclk),.D1(!sync),.D2(1'b1),.SR(1'b0),
+                                   .Q(pulse));
+    // purposefully inverted                                   
+    OBUFDS u_pulse_obuf(.I(pulse),.O(PULSE_N),.OB(PULSE_P));
+    
 endmodule
