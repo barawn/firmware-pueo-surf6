@@ -6,6 +6,8 @@ module surf_id_ctrl(
         input wb_rst_i,
         `TARGET_NAMED_PORTS_WB_IF( wb_ , 11, 32),
         
+        input [15:0] sysref_phase_i,
+        
         input [7:0] gpi_i,
         output [7:0] gpo_o,
         output [4:0] sync_offset_o,
@@ -21,6 +23,8 @@ module surf_id_ctrl(
         // watchdog trigger blows up the housekeeping path entirely.
         output watchdog_trigger_o,
         output watchdog_null_o,
+        
+        output rfdc_rst_o,
                 
         output aclk_ok_o,
         output rxclk_ok_o,
@@ -55,6 +59,9 @@ module surf_id_ctrl(
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg [4:0] sync_offset = SYNC_OFFSET_DEFAULT;
 
+    (* CUSTOM_CC_DST = WB_CLK_TYPE *)
+    reg [15:0] sysref_phase = {16{1'b0}};
+
     // watchdog fun
     reg watchdog_trigger_enable = 0;
     reg watchdog_trigger = 0;
@@ -65,8 +72,11 @@ module surf_id_ctrl(
     reg rundo_sync_seen = 0;
     reg runnoop_live_seen = 0;
     
+    (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
+    reg rfdc_stream_reset = 1;
+    
     // top 8 bits are a global stat: top bit is TURFIO ready
-    wire [31:0] ctrlstat_reg = { rackclk_ok_o, {6{1'b0}}, watchdog_trigger_enable,
+    wire [31:0] ctrlstat_reg = { rackclk_ok_o, {5{1'b0}}, rfdc_stream_reset, watchdog_trigger_enable,
                                  rundo_sync_seen, runnoop_live_seen, {1{1'b0}}, sync_offset, // 23:16
                                  ctrlstat_gpi,      // 15:8
                                  ctrlstat_gpo };    // 7:0
@@ -122,7 +132,8 @@ module surf_id_ctrl(
     `WISHBONE_ADDRESS( 12'h00C, ctrlstat_reg, OUTPUTSELECT, sel_ctrlstat, 0);
     // reg 4
     `WISHBONE_ADDRESS( 12'h010, hsk_packet_count, OUTPUT, [31:0], 0);
-    assign wishbone_registers[5] = wishbone_registers[1];
+    // reg 5
+    `WISHBONE_ADDRESS( 12'h014, sysref_phase, OUTPUT, [31:0], 0);
     assign wishbone_registers[6] = wishbone_registers[2];
     assign wishbone_registers[7] = wishbone_registers[3];
     assign wishbone_registers[8] = wishbone_registers[0];
@@ -184,6 +195,8 @@ module surf_id_ctrl(
     // otherwise
     // it gets reset to 4096-3600 on a watchdog start and counts up
     always @(posedge wb_clk_i) begin
+        sysref_phase <= sysref_phase_i;
+    
         if (sel_ctrlstat && wb_we_i && wb_ack_o && wb_sel_i[2] && wb_dat_i[23]) rundo_sync_seen <= 1'b0;
         else if (rundo_sync_i) rundo_sync_seen <= 1'b1;
     
@@ -217,7 +230,10 @@ module surf_id_ctrl(
         if (sel_ctrlstat && wb_we_i && wb_ack_o) begin
             // the gpo stuff gets handled above due to stupidity
             if (wb_sel_i[2]) sync_offset <= wb_dat_i[16 +: 5];
-            if (wb_sel_i[3]) watchdog_trigger_enable <= wb_dat_i[24];
+            if (wb_sel_i[3]) begin
+                watchdog_trigger_enable <= wb_dat_i[24];
+                rfdc_stream_reset <= wb_dat_i[25];
+            end                
         end
     end    
     
@@ -260,5 +276,7 @@ module surf_id_ctrl(
     
     assign watchdog_null_o = watchdog_null;
     assign watchdog_trigger_o = watchdog_trigger;
+    
+    assign rfdc_rst_o = rfdc_stream_reset;
     
 endmodule
