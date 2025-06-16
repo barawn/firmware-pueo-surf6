@@ -8,7 +8,7 @@
 
 # Set the project name
 set _xil_proj_name_ "firmware-pueo-surf6"
-set _this_part xczu25dr-ffve-1156-1-e
+set _this_part xczu47dr-ffve1156-1-e
 
 # Set the reference directory for source file relative paths (by default the value is script directory path)
 set origin_dir "."
