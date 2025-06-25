@@ -12,9 +12,7 @@ module surf_intercon(
         // Slaves
         `HOST_NAMED_PORTS_WB_IF( surf_id_ctrl_ , 11, 32),
         `HOST_NAMED_PORTS_WB_IF( tio_ , 11, 32),
-        `HOST_NAMED_PORTS_WB_IF( notch_ , 12, 32),
-        `HOST_NAMED_PORTS_WB_IF( agc_ , 12, 32),
-        `HOST_NAMED_PORTS_WB_IF( beam_ , 12, 32),
+        `HOST_NAMED_PORTS_WB_IF( levelone_ , 15, 32),
         `HOST_NAMED_PORTS_WB_IF( rfdc_ , 18, 32)    
     );    
 
@@ -37,23 +35,21 @@ module surf_intercon(
     // We only have 4 smaller spaces currently, so there are only 2 real bits to decode.
     // First space gets split in two however because the TURFIO interface is complicated
     // enough that I want to wrap it by itself.
+
+   // SURFs 
    localparam [21:0] SURF_ID_CTRL_BASE = 22'h000000;
-   localparam [21:0] SURF_ID_CTRL_MASK = 22'h1FC7FF;
+   localparam [21:0] SURF_ID_CTRL_MASK = 22'h1F77FF;
    localparam [21:0] TIO_BASE          = 22'h000800;
-   localparam [21:0] TIO_MASK          = 22'h1FC7FF;   
-   localparam [21:0] NOTCH_BASE        = 22'h001000;
-   localparam [21:0] NOTCH_MASK        = 22'h1FCFFF;
-   localparam [21:0] AGC_BASE          = 22'h002000;
-   localparam [21:0] AGC_MASK          = 22'h1FCFFF;
-   localparam [21:0] BEAM_BASE         = 22'h003000;
-   localparam [21:0] BEAM_MASK         = 22'h1FCFFF;
+   localparam [21:0] TIO_MASK          = 22'h1F77FF;
+   localparam [21:0] LEVELONE_BASE     = 22'h008000;
+   localparam [21:0] LEVELONE_MASK     = 22'h1F7FFF;   
    // RFDC only needs to decode the top bit. Everything else is local.
    localparam [21:0] RFDC_BASE = 22'h200000;
    localparam [21:0] RFDC_MASK = 22'h1FFFFF;   
     
     // START BOILERPLATE INTERCONNECT
     localparam NUM_MASTERS = 3;
-    localparam NUM_SLAVES = 6;    
+    localparam NUM_SLAVES = 4;    
     localparam ADDR_WIDTH = 22;
     localparam DATA_WIDTH = 32;
 	wire [NUM_MASTERS-1:0] requests;
@@ -168,10 +164,8 @@ module surf_intercon(
     // Map slaves
     `SLAVE_MAP( surf_id_ctrl_ , 0 , SURF_ID_CTRL_MASK, SURF_ID_CTRL_BASE );
     `SLAVE_MAP( tio_ , 1, TIO_MASK, TIO_BASE );
-    `SLAVE_MAP( notch_ , 2, NOTCH_MASK, NOTCH_BASE );
-    `SLAVE_MAP( agc_ , 3, AGC_MASK, AGC_BASE );
-    `SLAVE_MAP( beam_ , 4, BEAM_MASK, BEAM_BASE );
-    `SLAVE_MAP( rfdc_ , 5, RFDC_MASK, RFDC_BASE );
+    `SLAVE_MAP( levelone_ , 2, LEVELONE_MASK, LEVELONE_BASE );
+    `SLAVE_MAP( rfdc_ , 3, RFDC_MASK, RFDC_BASE );
     
     generate
         if (DEBUG == "TRUE") begin : DBG
