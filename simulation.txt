@@ -1,6 +1,6 @@
-verilog-library-barawn/sim/tb_rclock.sv
-sim/boardman_v2_sm_tb.sv
 sim/pueo_readout_tb.v
-sim/pueo_uram_v3_tb.sv
+sim/boardman_v2_sm_tb.sv
 sim/fwu_uaddr_tb.sv
+sim/pueo_uram_v3_tb.sv
 sim/pueo_wrapper_tb.sv
+verilog-library-barawn/sim/tb_rclock.sv
