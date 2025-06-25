@@ -15,6 +15,7 @@ source [file join [get_repo_dir] verilog-library-barawn tclbits repo_files.tcl]
 
 add_include_dir [file join [get_repo_dir] verilog-library-barawn include]
 add_include_dir [file join [get_repo_dir] include]
+add_include_dir [file join [get_repo_dir] hdl pueo-surf-trigger include]
 
 # set pre-synthesis scripts
 set_pre_synthesis_tcl [file join [get_repo_dir] pre_synthesis.tcl]
