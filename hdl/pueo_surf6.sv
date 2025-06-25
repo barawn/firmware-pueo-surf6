@@ -371,14 +371,12 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // the RF data converter since it wants an 18 bit address space
     // module 0: ID/ver/hsk                 0000 - 07FF
     // module 0b: TIO if                    0800 - 0FFF
-    // module 1: Notch filter control       1000 - 1FFF
-    // module 2: AGC control                2000 - 2FFF
-    // module 3: Beam threshold/masking     3000 - 3FFF
+    // (intermediate addresses are idctrl/TIO shadows)
+    // module 1: levelone                   8000 - FFFF
     `DEFINE_WB_IF( surf_id_ctrl_ , 11, 32 );
     `DEFINE_WB_IF( tio_ , 11, 32);
-    `DEFINE_WB_IF( notch_ , 12, 32);
-    `DEFINE_WB_IF( agc_ , 12, 32);
-    `DEFINE_WB_IF( beam_ , 12, 32);
+    // Notch and AGC go to Lucas's trigger_chain_x8_wrapper.
+    `DEFINE_WB_IF( levelone_ , 15, 32);
     `DEFINE_WB_IF( rfdc_ , 18, 32);
   
     // interconnect
@@ -431,13 +429,19 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 .dac_out_p(DAC_OUT_P),
                 .dac_out_n(DAC_OUT_N),
                 .adc_dout(adc_dout));
-                
-                
-    wbm_dummy #(.ADDRESS_WIDTH(22),.DATA_WIDTH(32)) u_ctl_stub(`CONNECT_WBM_IFM(wb_ , ctl_ ));
-    wbs_dummy #(.ADDRESS_WIDTH(12),.DATA_WIDTH(32)) u_notch_stub(`CONNECT_WBS_IFM(wb_ , notch_ ));
-    wbs_dummy #(.ADDRESS_WIDTH(12),.DATA_WIDTH(32)) u_agc_stub(`CONNECT_WBS_IFM(wb_ , agc_ ));
-    wbs_dummy #(.ADDRESS_WIDTH(12),.DATA_WIDTH(32)) u_beam_stub(`CONNECT_WBS_IFM(wb_ , beam_ ));
 
+    wire [47:0] levelone_trigger;                
+    L1_trigger_wrapper #(.NBEAMS(48),
+                         .AGC_TIMESCALE_REDUCTION_BITS(1))
+        u_trigger(.wb_clk_i(wb_clk),
+                  .wb_rst_i(1'b0),
+                  `CONNECT_WBS_IFM( wb_ , levelone_ ),
+                  // i dunno what this does lol
+                  .reset_i(1'b0),
+                  .aclk(aclk),
+                  .dat_i(adc_dout),
+                  .trigger_o(levelone_trigger));
+                
     // these are commands + trigger in
     wire [31:0] turf_command;
     wire        turf_command_valid;
