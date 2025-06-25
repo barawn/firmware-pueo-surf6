@@ -4,3 +4,6 @@
 [submodule "firmware-pueo-common"]
 	path = firmware-pueo-common
 	url = https://github.com/barawn/firmware-pueo-common
+[submodule "hdl/pueo-surf-trigger"]
+	path = hdl/pueo-surf-trigger
+	url = git@github.com:barawn/pueo-surf-trigger.git
