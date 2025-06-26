@@ -140,6 +140,7 @@ module rackctl_rxctl_sm_v1 #(parameter INV=1'b0,
     assign rackctl_out = rackctl_out_ff;
     
     reg rackctl_mode = 0;
+    (* CUSTOM_CC_DST = RXCLK_TYPE *)
     reg mode1_txn_type = 0;
             
     // ok so in MODE0_TXN it needs to work this way. Imagine if it was 3 4-bit words instead of 8-bit.
