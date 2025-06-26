@@ -28,8 +28,8 @@
         "ADC_RTS": [ { "value": "false", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "DAC_RTS": [ { "value": "false", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "Analog_Detection": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "Calibration_Freeze": [ { "value": "false", "resolve_type": "user", "format": "bool", "usage": "all" } ],
-        "Auto_Calibration_Freeze": [ { "value": "false", "resolve_type": "user", "format": "bool", "enabled": false, "usage": "all" } ],
+        "Calibration_Freeze": [ { "value": "true", "value_src": "user", "resolve_type": "user", "format": "bool", "usage": "all" } ],
+        "Auto_Calibration_Freeze": [ { "value": "false", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "Calibration_Time": [ { "value": "10", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "DAC_NCO_RTS": [ { "value": "false", "resolve_type": "user", "format": "bool", "enabled": false, "usage": "all" } ],
         "DAC_VOP_RTS": [ { "value": "false", "resolve_type": "user", "format": "bool", "usage": "all" } ],
@@ -890,7 +890,7 @@
         "C_DAC_RTS": [ { "value": "false", "resolve_type": "generated", "format": "bool", "usage": "all" } ],
         "C_ADC_RTS": [ { "value": "false", "resolve_type": "generated", "format": "bool", "usage": "all" } ],
         "C_Analog_Detection": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
-        "C_Calibration_Freeze": [ { "value": "false", "resolve_type": "generated", "format": "bool", "usage": "all" } ],
+        "C_Calibration_Freeze": [ { "value": "true", "resolve_type": "generated", "format": "bool", "usage": "all" } ],
         "C_Auto_Calibration_Freeze": [ { "value": "false", "resolve_type": "generated", "format": "bool", "usage": "all" } ],
         "C_Calibration_Time": [ { "value": "10", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_DAC_NCO_RTS": [ { "value": "false", "resolve_type": "generated", "format": "bool", "usage": "all" } ],
@@ -1765,7 +1765,31 @@
         "s0_axis_aclk": [ { "direction": "in", "driver_value": "0" } ],
         "s00_axis_tdata": [ { "direction": "in", "size_left": "255", "size_right": "0", "driver_value": "0" } ],
         "s00_axis_tvalid": [ { "direction": "in", "driver_value": "0" } ],
-        "s00_axis_tready": [ { "direction": "out" } ]
+        "s00_axis_tready": [ { "direction": "out" } ],
+        "adc0_01_int_cal_freeze": [ { "direction": "in", "driver_value": "0" } ],
+        "adc0_23_int_cal_freeze": [ { "direction": "in", "driver_value": "0" } ],
+        "adc0_01_cal_frozen": [ { "direction": "out" } ],
+        "adc0_23_cal_frozen": [ { "direction": "out" } ],
+        "adc0_01_sig_detect": [ { "direction": "out" } ],
+        "adc0_23_sig_detect": [ { "direction": "out" } ],
+        "adc1_01_int_cal_freeze": [ { "direction": "in", "driver_value": "0" } ],
+        "adc1_23_int_cal_freeze": [ { "direction": "in", "driver_value": "0" } ],
+        "adc1_01_cal_frozen": [ { "direction": "out" } ],
+        "adc1_23_cal_frozen": [ { "direction": "out" } ],
+        "adc1_01_sig_detect": [ { "direction": "out" } ],
+        "adc1_23_sig_detect": [ { "direction": "out" } ],
+        "adc2_01_int_cal_freeze": [ { "direction": "in", "driver_value": "0" } ],
+        "adc2_23_int_cal_freeze": [ { "direction": "in", "driver_value": "0" } ],
+        "adc2_01_cal_frozen": [ { "direction": "out" } ],
+        "adc2_23_cal_frozen": [ { "direction": "out" } ],
+        "adc2_01_sig_detect": [ { "direction": "out" } ],
+        "adc2_23_sig_detect": [ { "direction": "out" } ],
+        "adc3_01_int_cal_freeze": [ { "direction": "in", "driver_value": "0" } ],
+        "adc3_23_int_cal_freeze": [ { "direction": "in", "driver_value": "0" } ],
+        "adc3_01_cal_frozen": [ { "direction": "out" } ],
+        "adc3_23_cal_frozen": [ { "direction": "out" } ],
+        "adc3_01_sig_detect": [ { "direction": "out" } ],
+        "adc3_23_sig_detect": [ { "direction": "out" } ]
       },
       "interfaces": {
         "s_axi": {
@@ -2446,6 +2470,58 @@
           "port_maps": {
             "diff_n": [ { "physical_name": "sysref_in_n" } ],
             "diff_p": [ { "physical_name": "sysref_in_p" } ]
+          }
+        },
+        "adc0_calibration": {
+          "vlnv": "xilinx.com:display_usp_rf_data_converter:cal_freeze_pins:1.0",
+          "abstraction_type": "xilinx.com:display_usp_rf_data_converter:cal_freeze_pins_rtl:1.0",
+          "mode": "slave",
+          "port_maps": {
+            "CONVERTER01_CAL_FROZEN": [ { "physical_name": "adc0_01_cal_frozen" } ],
+            "CONVERTER01_INT_CAL_FREEZE": [ { "physical_name": "adc0_01_int_cal_freeze" } ],
+            "CONVERTER01_SIGNAL_DETECT": [ { "physical_name": "adc0_01_sig_detect" } ],
+            "CONVERTER23_CAL_FROZEN": [ { "physical_name": "adc0_23_cal_frozen" } ],
+            "CONVERTER23_INT_CAL_FREEZE": [ { "physical_name": "adc0_23_int_cal_freeze" } ],
+            "CONVERTER23_SIGNAL_DETECT": [ { "physical_name": "adc0_23_sig_detect" } ]
+          }
+        },
+        "adc1_calibration": {
+          "vlnv": "xilinx.com:display_usp_rf_data_converter:cal_freeze_pins:1.0",
+          "abstraction_type": "xilinx.com:display_usp_rf_data_converter:cal_freeze_pins_rtl:1.0",
+          "mode": "slave",
+          "port_maps": {
+            "CONVERTER01_CAL_FROZEN": [ { "physical_name": "adc1_01_cal_frozen" } ],
+            "CONVERTER01_INT_CAL_FREEZE": [ { "physical_name": "adc1_01_int_cal_freeze" } ],
+            "CONVERTER01_SIGNAL_DETECT": [ { "physical_name": "adc1_01_sig_detect" } ],
+            "CONVERTER23_CAL_FROZEN": [ { "physical_name": "adc1_23_cal_frozen" } ],
+            "CONVERTER23_INT_CAL_FREEZE": [ { "physical_name": "adc1_23_int_cal_freeze" } ],
+            "CONVERTER23_SIGNAL_DETECT": [ { "physical_name": "adc1_23_sig_detect" } ]
+          }
+        },
+        "adc2_calibration": {
+          "vlnv": "xilinx.com:display_usp_rf_data_converter:cal_freeze_pins:1.0",
+          "abstraction_type": "xilinx.com:display_usp_rf_data_converter:cal_freeze_pins_rtl:1.0",
+          "mode": "slave",
+          "port_maps": {
+            "CONVERTER01_CAL_FROZEN": [ { "physical_name": "adc2_01_cal_frozen" } ],
+            "CONVERTER01_INT_CAL_FREEZE": [ { "physical_name": "adc2_01_int_cal_freeze" } ],
+            "CONVERTER01_SIGNAL_DETECT": [ { "physical_name": "adc2_01_sig_detect" } ],
+            "CONVERTER23_CAL_FROZEN": [ { "physical_name": "adc2_23_cal_frozen" } ],
+            "CONVERTER23_INT_CAL_FREEZE": [ { "physical_name": "adc2_23_int_cal_freeze" } ],
+            "CONVERTER23_SIGNAL_DETECT": [ { "physical_name": "adc2_23_sig_detect" } ]
+          }
+        },
+        "adc3_calibration": {
+          "vlnv": "xilinx.com:display_usp_rf_data_converter:cal_freeze_pins:1.0",
+          "abstraction_type": "xilinx.com:display_usp_rf_data_converter:cal_freeze_pins_rtl:1.0",
+          "mode": "slave",
+          "port_maps": {
+            "CONVERTER01_CAL_FROZEN": [ { "physical_name": "adc3_01_cal_frozen" } ],
+            "CONVERTER01_INT_CAL_FREEZE": [ { "physical_name": "adc3_01_int_cal_freeze" } ],
+            "CONVERTER01_SIGNAL_DETECT": [ { "physical_name": "adc3_01_sig_detect" } ],
+            "CONVERTER23_CAL_FROZEN": [ { "physical_name": "adc3_23_cal_frozen" } ],
+            "CONVERTER23_INT_CAL_FREEZE": [ { "physical_name": "adc3_23_int_cal_freeze" } ],
+            "CONVERTER23_SIGNAL_DETECT": [ { "physical_name": "adc3_23_sig_detect" } ]
           }
         }
       },
