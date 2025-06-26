@@ -14,6 +14,10 @@ module surf_id_ctrl(
         
         input rundo_sync_i,
         input runnoop_live_i,
+        
+        input [7:0] adc_sigdet_i,
+        input [7:0] adc_cal_frozen_i,
+        output [7:0] adc_cal_freeze_o,
             
         // data from TURFIO
         input hsk_rx_i,
@@ -72,6 +76,8 @@ module surf_id_ctrl(
     reg rundo_sync_seen = 0;
     reg runnoop_live_seen = 0;
     
+    reg [7:0] cal_freeze = {8{1'b0}};
+    
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg rfdc_stream_reset = 1;
     
@@ -89,7 +95,12 @@ module surf_id_ctrl(
         
     wire sel_internal = (wb_adr_i[6 +: (WB_ADR_BITS-6)] == 0);
     wire [31:0] wishbone_registers[15:0];
-        
+
+//        input [7:0] adc_sigdet_i,
+//        input [7:0] adc_cal_frozen_i,
+//        output [7:0] adc_cal_freeze_o,
+
+    wire [31:0] adc_cal_ports = { {8{1'b0}}, adc_sigdet_i, adc_cal_frozen_i, cal_freeze };
     
         // Convenience stuff. These allow setting up wishbone registers easier.
 		// BASE needs to be defined to convert the base address into an index.
@@ -134,7 +145,8 @@ module surf_id_ctrl(
     `WISHBONE_ADDRESS( 12'h010, hsk_packet_count, OUTPUT, [31:0], 0);
     // reg 5
     `WISHBONE_ADDRESS( 12'h014, sysref_phase, OUTPUT, [31:0], 0);
-    assign wishbone_registers[6] = wishbone_registers[2];
+    // reg 6
+    `WISHBONE_ADDRESS( 12'h018, adc_cal_ports, OUTPUTSELECT, sel_adc_cal_ports, 0);
     assign wishbone_registers[7] = wishbone_registers[3];
     assign wishbone_registers[8] = wishbone_registers[0];
     assign wishbone_registers[9] = wishbone_registers[1];
@@ -197,6 +209,9 @@ module surf_id_ctrl(
     always @(posedge wb_clk_i) begin
         sysref_phase <= sysref_phase_i;
     
+        if (sel_adc_cal_ports && wb_we_i && wb_ack_o && wb_sel_i[0]) begin
+            cal_freeze <= wb_dat_i[7:0];
+        end    
         if (sel_ctrlstat && wb_we_i && wb_ack_o && wb_sel_i[2] && wb_dat_i[23]) rundo_sync_seen <= 1'b0;
         else if (rundo_sync_i) rundo_sync_seen <= 1'b1;
     
@@ -278,5 +293,7 @@ module surf_id_ctrl(
     assign watchdog_trigger_o = watchdog_trigger;
     
     assign rfdc_rst_o = rfdc_stream_reset;
+    
+    assign adc_cal_freeze_o = cal_freeze;
     
 endmodule
