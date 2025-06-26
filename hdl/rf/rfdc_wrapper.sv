@@ -22,8 +22,13 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
         // ultrastupidity
         input dac_clk_p,
         input dac_clk_n,
-        input dac_out_p,
-        input dac_out_n,
+        output dac_out_p,
+        output dac_out_n,
+
+        // cal freeze and signal monitor
+        output [7:0] adc_sig_detect,
+        output [7:0] adc_cal_frozen,
+        input [7:0]  adc_cal_freeze,
                 
         // these vector        
         input [NCLKS-1:0] adc_clk_p,
@@ -253,6 +258,35 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
                         // dacs, whatevs
                         .vout00_p(dac_out_p),
                         .vout00_n(dac_out_n),
+                        // cal freeze ports
+                        .adc0_01_sig_detect( adc_sig_detect[0] ),
+                        .adc0_23_sig_detect( adc_sig_detect[1] ),
+                        .adc1_01_sig_detect( adc_sig_detect[2] ),
+                        .adc1_23_sig_detect( adc_sig_detect[3] ),
+                        .adc2_01_sig_detect( adc_sig_detect[4] ),
+                        .adc2_23_sig_detect( adc_sig_detect[5] ),
+                        .adc3_01_sig_detect( adc_sig_detect[6] ),
+                        .adc3_23_sig_detect( adc_sig_detect[7] ),
+                        
+                        .adc0_01_cal_frozen( adc_cal_frozen[0] ),
+                        .adc0_23_cal_frozen( adc_cal_frozen[1] ),
+                        .adc1_01_cal_frozen( adc_cal_frozen[2] ),
+                        .adc1_23_cal_frozen( adc_cal_frozen[3] ),
+                        .adc2_01_cal_frozen( adc_cal_frozen[4] ),
+                        .adc2_23_cal_frozen( adc_cal_frozen[5] ),
+                        .adc3_01_cal_frozen( adc_cal_frozen[6] ),
+                        .adc3_23_cal_frozen( adc_cal_frozen[7] ),
+                        
+                        .adc0_01_int_cal_freeze( adc_cal_freeze[0] ),
+                        .adc0_23_int_cal_freeze( adc_cal_freeze[1] ),
+                        .adc1_01_int_cal_freeze( adc_cal_freeze[2] ),
+                        .adc1_23_int_cal_freeze( adc_cal_freeze[3] ),
+                        .adc2_01_int_cal_freeze( adc_cal_freeze[4] ),
+                        .adc2_23_int_cal_freeze( adc_cal_freeze[5] ),
+                        .adc3_01_int_cal_freeze( adc_cal_freeze[6] ),
+                        .adc3_23_int_cal_freeze( adc_cal_freeze[7] ),
+                        
+                        
                         // sysrefs
                         .sysref_in_p(sysref_p),
                         .sysref_in_n(sysref_n),
