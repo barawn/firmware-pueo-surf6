@@ -21,7 +21,8 @@ module cmdproc_buffer #(parameter ACLK_TYPE = "NONE",
     reg [23:0] address = {24{1'b0}};
     reg [31:0] data = {32{1'b0}};
     
-    wire cmdfifo_rst_wbclk;
+    (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
+    reg cmdfifo_rst_wbclk = 0;
     (* CUSTOM_CC_DST = ACLK_TYPE, ASYNC_REG = "TRUE" *)
     reg [1:0] cmdfifo_reset = {2{1'b0}};
     always @(posedge aclk) cmdfifo_reset <= {cmdfifo_reset[0], cmdfifo_rst_wbclk};
@@ -53,15 +54,17 @@ module cmdproc_buffer #(parameter ACLK_TYPE = "NONE",
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg [FSM_BITS-1:0] state = RESET;
     
-    assign cmdfifo_rst_wbclk = (state == RESET);
+    assign cmdfifo_rst = (state == RESET);
     
     reg reset_seen = 0;    
     wire reset_flag = (state == RESET && !reset_seen);
     wire reset_delay;
-    SRLC32E u_rst_delay(.D(reset_flag),.CE(1'b1),.CLK(aclk),.Q31(reset_delay));
+    SRLC32E u_rst_delay(.D(reset_flag),.CE(1'b1),.CLK(wb_clk_i),.Q31(reset_delay));
     // cmdproc_reset ONLY jumps us to RESET
     // if we're not waiting for a WB transaction.
     always @(posedge wb_clk_i) begin
+        cmdfifo_rst_wbclk <= cmdfifo_rst;
+        
         reset_seen <= (state == RESET);
         
         case (state)
