@@ -24,6 +24,7 @@ verilog-library-barawn/hdl/round_robin_arbiter.v
 verilog-library-barawn/hdl/srlvec.v
 hdl/serial_if/uart/uart_rx6.v
 hdl/serial_if/uart/uart_tx6.v
+verilog-library-barawn/hdl/wbs_dummy.v
 verilog-library-barawn/hdl/wishbone_arbiter.v
 hdl/zynq_bd_wrapper.v
 hdl/pueo-surf-trigger/hdl/L1_trigger.sv
@@ -83,6 +84,5 @@ hdl/pueo-surf-trigger/hdl/xil_tiny_lfsr_3bit.sv
 verilog-library-barawn/hdl/beamthresh/ternary_adder.vhd
 hdl/pueo_surf6.sv
 verilog-library-barawn/hdl/wbm_dummy.v
-verilog-library-barawn/hdl/wbs_dummy.v
 verilog-library-barawn/hdl/obufds_autoinv.v
 verilog-library-barawn/hdl/math/seven_bit_square.sv
