@@ -15,8 +15,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
-                    parameter [3:0] VER_MINOR = 4'd2,
-                    parameter [7:0] VER_REV = 8'd3,
+                    parameter [3:0] VER_MINOR = 4'd3,
+                    parameter [7:0] VER_REV = 8'd2,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -108,6 +108,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
         input [7:0] ADC_IN_P,
         input [7:0] ADC_IN_N        
     );
+    
+    parameter USE_BIQUADS = "FALSE";
     
     `ifdef USE_INTERPHI
     localparam IBERT = "TRUE";
@@ -389,9 +391,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     
                     `CONNECT_WBM_IFM( surf_id_ctrl_ , surf_id_ctrl_ ),
                     `CONNECT_WBM_IFM( tio_ , tio_ ),
-                    `CONNECT_WBM_IFM( notch_ , notch_ ),
-                    `CONNECT_WBM_IFM( agc_ , agc_ ),
-                    `CONNECT_WBM_IFM( beam_ , beam_ ),
+                    `CONNECT_WBM_IFM( levelone_ , levelone_ ),
                     `CONNECT_WBM_IFM( rfdc_ , rfdc_ ));
 
     // ok, here we go, folks
@@ -409,7 +409,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam NSAMP = 8;
     localparam NBITS = 12;
     wire [NCHAN*NSAMP*NBITS-1:0] adc_dout;
-    rfdc_wrapper #(.DEVICE(DEVICE),.NCLKS(4))
+    reg [NCHAN*NSAMP*NBITS-1:0] adc_dout_reg = {NCHAN*NSAMP*NBITS{1'b0}};
+    always @(posedge aclk) adc_dout_reg <= adc_dout;
+    rfdc_wrapper #(.DEVICE(DEVICE),.NCLKS(4),.DEBUG("FALSE"))
         u_rfdc( .wb_clk_i(wb_clk),
                 .wb_rst_i(1'b0),
                 `CONNECT_WBS_IFM( wb_ , rfdc_ ),
@@ -432,14 +434,17 @@ module pueo_surf6 #(parameter IDENT="SURF",
 
     wire [47:0] levelone_trigger;                
     L1_trigger_wrapper #(.NBEAMS(48),
-                         .AGC_TIMESCALE_REDUCTION_BITS(1))
+                         .AGC_TIMESCALE_REDUCTION_BITS(1),
+                         .USE_BIQUADS(USE_BIQUADS),
+                         .WBCLKTYPE(WB_CLK_TYPE),
+                         .CLKTYPE("SYSREFCLK"))
         u_trigger(.wb_clk_i(wb_clk),
                   .wb_rst_i(1'b0),
                   `CONNECT_WBS_IFM( wb_ , levelone_ ),
                   // i dunno what this does lol
                   .reset_i(1'b0),
                   .aclk(aclk),
-                  .dat_i(adc_dout),
+                  .dat_i(adc_dout_reg),
                   .trigger_o(levelone_trigger));
                 
     // these are commands + trigger in
