@@ -27,9 +27,11 @@ module wb_rackctl_master #(parameter INV = 1'b0,
     localparam MODE1 = 1;
     
     // capture mode in wbclk
+    (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg mode = MODE0;
     
     // and pass to sysclk
+    (* CUSTOM_CC_DST = RACKCLK_TYPE *)
     reg [1:0] mode_rackclk = {2{1'b0}};
     
     // address captured in mode 0
