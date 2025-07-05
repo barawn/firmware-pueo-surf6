@@ -229,6 +229,8 @@ module pueo_uram_v4 #(
     // the NCHAN+1 is for stupidity
     `DEFINE_URAM_FULL_CASCADE_VEC( uram_ , NCHAN );    
 
+    reg sleeping = 1;
+    always @(posedge memclk) sleeping <= ~running;
     generate
         genvar i;
         for (i=0;i<NCHAN;i=i+1) begin : CH
@@ -281,7 +283,6 @@ module pueo_uram_v4 #(
             // every 3 because that's the relationship between the two.
             // (which of course means the bottom 2 bits are pointless).
             reg [ADDRLEN-1:0] write_addr = {ADDRLEN{1'b0}};
-            reg sleeping = 1;
             
             // we still reset to 0, we just compensate for the
             // extra bit in the TURF. We need to time out
@@ -289,7 +290,6 @@ module pueo_uram_v4 #(
             localparam [ADDRLEN-1:0] WRITE_RESET_VALUE = 0;
             
             always @(posedge memclk) begin
-                sleeping <= ~running;
                 if (do_write_reset && memclk_phase[3]) write_addr <= WRITE_RESET_VALUE;
                 else write_addr <= write_addr + 1;
             end
