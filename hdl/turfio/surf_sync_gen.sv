@@ -122,14 +122,14 @@ module surf_sync_gen(
 
     // *complete* mimic of the TURFIO code, which
     // we know replicates the SURF clock. So this
-    // could actually be used as the PL SYSREF.
+    // could actually be used as the PL SYSREF.    
     always @(posedge ifclk_i) begin
         rundo_sync_ifclk <= sync_req_i;
         
         sync_offset_ifclk <= sync_offset_i;
 
         sync_is_next <= (clk_phase_counter == 14);
-        
+                
         if (do_sync_out) clk_phase_counter <= {4{1'b0}};
         else clk_phase_counter <= clk_phase_counter[3:0] + 1;
                
