@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+`include "interfaces.vh"
 // turfio_cout is synchronous.
 // our training pattern is still 
 //     parameter [31:0] TRAIN_SEQUENCE = 32'hA55A6996;
@@ -15,8 +16,8 @@ module turfio_cout(
         
         input       train_i,
 
-        input [31:0] cout_data_i,
-        input        cout_valid_i,
+        // make this properly an AXI4-stream
+        `TARGET_NAMED_PORTS_AXI4S_MIN_IF( cout_ , 32),
 
         output      COUT_P,
         output      COUT_N                
@@ -39,10 +40,13 @@ module turfio_cout(
     // ifclk_not_running.
     reg [1:0] training_begin = {2{1'b0}};
     
-    wire [31:0] cur_cout_value = (cout_valid_i) ? cout_data_i : 32'h80008000;
+    // dude what the hell was I doing this should be all zeros dumbass
+    wire [31:0] cur_cout_value = (cout_tvalid) ? cout_tdata : 32'h00000000;
     wire [31:0] value_to_send = (training) ? TRAIN_VALUE : cur_cout_value;
 
     reg [2:0] command_phase = {3{1'b0}};
+
+    reg cout_ready_reg = 0;
     
     reg [31:0] command_hold = {32{1'b0}};
     
@@ -123,6 +127,9 @@ module turfio_cout(
             // it'll get reset.
             command_hold[27:0] <= command_hold[31:4];
         end
+        
+        // tready goes high in 7
+        cout_ready_reg <= command_phase == 6;
     end
     
     wire oddre2_out;
@@ -132,5 +139,6 @@ module turfio_cout(
                                           .SR(ifclk_not_running),
                                           .Q(oddre2_out));
     obuftds_autoinv #(.INV(INV_COUT)) u_cout(.I(oddre2_out),.T(1'b0),.O_P(COUT_P),.O_N(COUT_N));    
-    
+        
+    assign cout_tready = cout_ready_reg;
 endmodule
