@@ -44,8 +44,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
         output [31:0] command_o,
         output command_valid_o,
         // this is actually just the trigger
-        input [31:0] response_i,
-        input response_valid_i,
+        `TARGET_NAMED_PORTS_AXI4S_MIN_IF( s_trig_ , 32 ),
 
         // this is the DOUT path, in IFCLK domain
         input [7:0] dout_data_i,
@@ -193,7 +192,8 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
     // now the CIN module looks more like the TURF side, because we don't
     // have a bitslip module. Except we integrate a bit more.
     wire [3:0] cin_rxclk;
-    turfio_cin_surf #(.INV(INV_CIN),.CLKTYPE("RXCLK"))
+    turfio_cin_surf #(.INV(INV_CIN),.CLKTYPE("RXCLK"),
+                      .DEBUG("FALSE"))
         u_cin(.rxclk_i(rxclk),
               .rxclk_x2_i(rxclk_x2),
               .rst_i(cin_rst),
@@ -240,7 +240,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                        .syncclk_toggle_i(syncclk_toggle),
                        .capture_err_o(capture_err));
 
-    turfio_cin_parallel_sync 
+    turfio_cin_parallel_sync #(.DEBUG("FALSE"))
         u_parallelizer(.aclk_i(aclk_i),
                        .cin_i(cin_aclk),
                        .cin_valid_i(ce_aclk),
@@ -273,8 +273,7 @@ module turfio_wrapper #(parameter INV_CIN = 1'b0,
                .ifclk_x2_i(ifclk_x2_i),
                .ifclk_sync_i(ifclk_sync_i),
                .train_i(train_en[0]),
-               .cout_data_i(response_i),
-               .cout_valid_i(response_valid_i),
+               `CONNECT_AXI4S_MIN_IF( cout_ , s_trig_ ),
                .COUT_P(COUT_P),
                .COUT_N(COUT_N));               
 
