@@ -43,8 +43,8 @@ verilog-library-barawn/hdl/beamthresh/dual_pueo_beam_dsp.sv
 verilog-library-barawn/hdl/fir_dsp_core.sv
 verilog-library-barawn/hdl/math/fivebit_8way_ternary.sv
 hdl/uram/fwupd_uaddr.sv
-hdl/interphi/interphi_ibert_wrapper.sv
 hdl/pueo-surf-trigger/hdl/lfsr_rms_mux.sv
+verilog-library-barawn/hdl/filters/matched_filter.sv
 hdl/pueo-surf-trigger/hdl/probit_accumulator.sv
 hdl/pueo_command_decoder.sv
 hdl/uram/pueo_uram_v4.sv
@@ -63,6 +63,7 @@ hdl/surf6_mode1_monitor.sv
 hdl/surf_id_ctrl/surf_id_ctrl.sv
 hdl/surf_intercon.sv
 hdl/turfio/surf_sync_gen.sv
+hdl/trig_gen/surf_trig_gen.sv
 hdl/pueo-surf-trigger/hdl/trigger_chain_wrapper.sv
 hdl/pueo-surf-trigger/hdl/trigger_chain_x8_wrapper.sv
 hdl/turfio/turfio_cin_parallel_sync.sv
@@ -83,6 +84,11 @@ hdl/spi_if/wb_spi_master.sv
 hdl/pueo-surf-trigger/hdl/xil_tiny_lfsr_3bit.sv
 verilog-library-barawn/hdl/beamthresh/ternary_adder.vhd
 hdl/pueo_surf6.sv
-verilog-library-barawn/hdl/wbm_dummy.v
+hdl/interphi/interphi_ibert_wrapper.sv
 verilog-library-barawn/hdl/obufds_autoinv.v
+verilog-library-barawn/hdl/wbm_dummy.v
 verilog-library-barawn/hdl/math/seven_bit_square.sv
+hb.coe
+hdl/pueo-surf-trigger/hdl_v2/L1_trigger_v2.sv
+hdl/pueo-surf-trigger/hdl_v2/L1_trigger_intercon.sv
+hdl/pueo-surf-trigger/hdl/L1_trigger_loop.sv
