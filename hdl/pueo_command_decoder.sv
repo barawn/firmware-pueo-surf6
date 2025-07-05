@@ -47,7 +47,7 @@ module pueo_command_decoder(
 
     // We simplified the heck out of this.
     assign trig_valid_o = command_i[15] && command_valid_i;
-    assign trig_time_o = command_i[0 +: 14];
+    assign trig_time_o = command_i[0 +: 15];
 
     // message stuff
     wire   message_valid = !command_i[31] && command_valid_i;
