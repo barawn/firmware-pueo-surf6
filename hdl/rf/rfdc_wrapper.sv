@@ -37,7 +37,7 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
         input [NCHAN-1:0] adc_in_p,
         input [NCHAN-1:0] adc_in_n,
         // wacko huge vector
-        output [NSAMP*NCHAN*NBITS-1:0] adc_dout        
+        output [NSAMP*NCHAN*NBITS-1:0] adc_dout
     );
 
     localparam RFDC_BITS = 16;
