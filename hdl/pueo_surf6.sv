@@ -418,10 +418,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam NBITS = 12;
     wire [NCHAN*NSAMP*NBITS-1:0] adc_dout;
     reg [NCHAN*NSAMP*NBITS-1:0] adc_dout_reg = {NCHAN*NSAMP*NBITS{1'b0}};
+    reg [NCHAN*NSAMP*NBITS-1:0] pipe_reg = {NCHAN*NSAMP*NBITS{1'b0}};
     reg [NCHAN*NSAMP*NBITS-1:0] trig_dout_reg = {NCHAN*NSAMP*NBITS{1'b0}};
-        
     always @(posedge aclk) adc_dout_reg <= adc_dout;
-    always @(posedge tclk) trig_dout_reg <= adc_dout_reg;
+    always @(posedge tclk) begin
+        pipe_reg <= adc_dout_reg;
+        trig_dout_reg <= pipe_reg;
+    end        
     
     wire [7:0] adc_sig_detect;
     wire [7:0] adc_cal_frozen;
