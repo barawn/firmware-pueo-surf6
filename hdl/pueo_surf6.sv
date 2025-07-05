@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd3,
-                    parameter [7:0] VER_REV = 8'd2,
+                    parameter [7:0] VER_REV = 8'd9,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -109,7 +109,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
         input [7:0] ADC_IN_N        
     );
     
-    parameter USE_BIQUADS = "FALSE";
+    localparam USE_BIQUADS = "FALSE";
     
     `ifdef USE_INTERPHI
     localparam IBERT = "TRUE";
@@ -142,6 +142,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // 375 MHz system clock.
     wire aclk_in;
     wire aclk;
+    // tclk is the trigger path clock, it is SHUT DOWN at start to conserve power
+    // on hot days
+    wire tclk;
     // PL sysref
     wire pl_sysref;
     // command tx input (from other SURF)/data/tristate, command rx, and the watchdog null wakeup
@@ -210,6 +213,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
 
     wire firmware_loading = idctrl_gpo[7];
     wire clocks_ready = idctrl_gpo[0];
+    wire tclock_ready = idctrl_gpo[6];
     generate
         if (REVISION == "B") begin : REVB
             // ACLK comes from SYSCLK_P/N, and has names inverted (but is correct b/c of inversion at clock)
@@ -226,10 +230,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
             // handle clk reset
             OBUFT u_clkrst_obuf(.I(1'b0),.T(clk_rst_b),.O(B88_L11_N));
 
-            // handle OE_AUXCLK
-            IOBUF u_oe_auxclk_obuf(.I(1'b0),.T(~idctrl_gpo[5]),.IO(B88_L5_P));
-            // handle OE_MGTCLK
-            IOBUF u_oe_mgtclk_obuf(.I(1'b0),.T(~idctrl_gpo[6]),.IO(B88_L5_N));
+            // OK, because the MGTs are now unused COMPLETELY we'll gang them
+            // to the same GPO to free up one and default it to zero.
+            wire en_mgt_clks = idctrl_gpo[5];
+            IOBUF u_oe_auxclk_obuf(.I(1'b0),.T(en_mgt_clks),.IO(B88_L5_P));
+            IOBUF u_oe_mgtclk_obuf(.I(1'b0),.T(en_mgt_clks),.IO(B88_L5_N));
         end else begin : REVA
             // ACLK comes from SYSREFCLK_P/N
             // We do NOT SUPPRESS ACLK at the input buffer! It's not glitch free
@@ -276,6 +281,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
     assign CALEN = idctrl_gpo[4];
     (* CUSTOM_CC_DST = "SYSREFCLK" *)
     BUFGCE #(.CE_TYPE("SYNC")) u_aclk_bufg(.I(aclk_in),.O(aclk),.CE(clocks_ready));
+    (* CUSTOM_CC_DST = "SYSREFCLK" *)
+    BUFGCE #(.CE_TYPE("SYNC")) u_tclk_bufg(.I(aclk_in),.O(tclk),.CE(tclock_ready));
             
     // let's just try "reset until the goddamn thing lines up"
     wire aclk_reset;
@@ -382,7 +389,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     `DEFINE_WB_IF( rfdc_ , 18, 32);
   
     // interconnect
-    surf_intercon #(.DEBUG("TRUE"))
+    surf_intercon #(.DEBUG("FALSE"))
         u_intercon( .clk_i(wb_clk),
                     .rst_i(1'b0),
                     `CONNECT_WBS_IFM( bm_ , bm_ ),
@@ -399,7 +406,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire sysref_pl;
     wire [15:0] sysref_phase;
     wire rfdc_reset;
-    rfdc_sync u_sysref_sync(.sysclk_i(aclk),
+    rfdc_sync #(.DEBUG("TRUE"))
+              u_sysref_sync(.sysclk_i(aclk),
                             .ifclk_i(ifclk),
                             .sysclk_sync_i(sync),
                             .sysref_i(pl_sysref),
@@ -410,7 +418,15 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam NBITS = 12;
     wire [NCHAN*NSAMP*NBITS-1:0] adc_dout;
     reg [NCHAN*NSAMP*NBITS-1:0] adc_dout_reg = {NCHAN*NSAMP*NBITS{1'b0}};
+    reg [NCHAN*NSAMP*NBITS-1:0] trig_dout_reg = {NCHAN*NSAMP*NBITS{1'b0}};
+        
     always @(posedge aclk) adc_dout_reg <= adc_dout;
+    always @(posedge tclk) trig_dout_reg <= adc_dout_reg;
+    
+    wire [7:0] adc_sig_detect;
+    wire [7:0] adc_cal_frozen;
+    wire [7:0] adc_cal_freeze;
+    
     rfdc_wrapper #(.DEVICE(DEVICE),.NCLKS(4),.DEBUG("FALSE"))
         u_rfdc( .wb_clk_i(wb_clk),
                 .wb_rst_i(1'b0),
@@ -418,6 +434,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 .bridge_err_o(rfdc_bridge_err),
                 .aclk(aclk),
                 .aresetn(!rfdc_reset),
+                
+                .adc_sig_detect(adc_sig_detect),
+                .adc_cal_frozen(adc_cal_frozen),
+                .adc_cal_freeze(adc_cal_freeze),                
+                
                 .sysref_p(SYSREF_P),
                 .sysref_n(SYSREF_N),
                 .sysref_pl_i(sysref_pl),
@@ -432,27 +453,65 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 .dac_out_n(DAC_OUT_N),
                 .adc_dout(adc_dout));
 
-    wire [47:0] levelone_trigger;                
-    L1_trigger_wrapper #(.NBEAMS(48),
+    // find a place to embed this
+    wire [47:0] levelone_trigger;
+    wire [47:0] levelone_mask;
+    wire [1:0]  levelone_mask_wr;
+    wire        levelone_mask_update;
+    wire        trig_gen_reset;
+    L1_trigger_wrapper #(.NBEAMS(46),
                          .AGC_TIMESCALE_REDUCTION_BITS(1),
                          .USE_BIQUADS(USE_BIQUADS),
                          .WBCLKTYPE(WB_CLK_TYPE),
                          .CLKTYPE("SYSREFCLK"))
         u_trigger(.wb_clk_i(wb_clk),
-                  .wb_rst_i(1'b0),
+                  .wb_rst_i(!tclock_ready),
                   `CONNECT_WBS_IFM( wb_ , levelone_ ),
+                  .mask_o(levelone_mask),
+                  .mask_wr_o(levelone_mask_wr),
+                  .mask_update_o(levelone_mask_update),
+                  .gen_rst_o(trig_gen_reset),
                   // i dunno what this does lol
                   .reset_i(1'b0),
-                  .aclk(aclk),
-                  .dat_i(adc_dout_reg),
+                  .aclk(tclk),
+                  .dat_i(trig_dout_reg),
                   .trigger_o(levelone_trigger));
+
+    `DEFINE_AXI4S_MIN_IF( trigger_ , 32 );
+    wire run_reset;
+    wire run_stop;
+    
+    wire [1:0] levelone_mask_wr_aclk;
+    wire levelone_mask_update_aclk;
+    flag_sync u_wr0_sync(.in_clkA(levelone_mask_wr[0]),
+                         .out_clkB(levelone_mask_wr_aclk[0]),
+                         .clkA(wb_clk),
+                         .clkB(aclk));
+    flag_sync u_wr1_sync(.in_clkA(levelone_mask_wr[1]),
+                         .out_clkB(levelone_mask_wr_aclk[1]),
+                         .clkA(wb_clk),
+                         .clkB(aclk));
+    flag_sync u_upd_sync(.in_clkA(levelone_mask_update),
+                         .out_clkB(levelone_mask_update_aclk),
+                         .clkA(wb_clk),
+                         .clkB(aclk));                                                  
+    surf_trig_gen #(.ACLKTYPE("SYSREFCLK"))
+        u_triggen(.aclk(aclk),
+                  .aclk_phase_i(aclk_phase),
+                  .trig_i(levelone_trigger),
+                  .mask_i(levelone_mask),
+                  .mask_wr_i(levelone_mask_wr_aclk),
+                  .mask_update_i(levelone_mask_update_aclk),
+                  .gen_rst_i(trig_gen_reset),
+                  .ifclk(ifclk),
+                  .runrst_i(run_reset),
+                  .runstop_i(run_stop),
+                  `CONNECT_AXI4S_MIN_IF(trig_ , trigger_ ));
+    
                 
     // these are commands + trigger in
     wire [31:0] turf_command;
     wire        turf_command_valid;
-    // I call this a response but it's really trigger out
-    wire [31:0] surf_response;
-    wire        surf_response_valid;
     
     // command processor stream (in aclk domain)
     `DEFINE_AXI4S_MIN_IF( cmdproc_ , 8 );
@@ -494,8 +553,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire        trigger_time_valid;
 
     wire        run_dosync;
-    wire        run_reset;
-    wire        run_stop;
+// defined above
+//    wire        run_reset;
+//    wire        run_stop;
 
     wire        pps;
 
@@ -524,11 +584,21 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            
                                            .trig_time_o(trigger_time),
                                            .trig_valid_o(trigger_time_valid));
-
+    (* IOB = "TRUE", CUSTOM_MC_DST_TAG = "RUNRST RUNSTOP" *)
+    reg run_dbg = 0;  
+    always @(posedge ifclk) begin
+        if (run_reset) run_dbg <= 1;
+        else if (run_stop) run_dbg <= 0;                                         
+    end
+    assign TP3 = run_dbg;
+    
     // sync generation
     wire [4:0] sync_offset; // from idctrl
     
-    surf_sync_gen #(.SYNC_OFFSET_DEFAULT(SYNC_OFFSET_DEFAULT))
+    // steal TP3
+    wire dbg2_dummy;
+    surf_sync_gen #(.SYNC_OFFSET_DEFAULT(SYNC_OFFSET_DEFAULT),
+                    .USE_IOB2("FALSE"))
                   u_syncgen(.aclk_i(aclk),
                             .aclk_phase_i(aclk_phase),
                             .sync_req_i(run_dosync),
@@ -536,7 +606,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                             .memclk_i(memclk),
                             .memclk_phase_i(memclk_phase),
                             .ifclk_i(ifclk),
-                            .dbg_sync_o( { TP3, TP2 } ),
+                            .dbg_sync_o( { dbg2_dummy, TP2 } ),
                             .sync_o(sync),
                             .sync_memclk_o(memclk_sync),
                             .sync_ifclk_o(ifclk_sync));
@@ -551,7 +621,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     assign idctrl_gpi[0 +: NUM_TURFIO_ERR] = turfio_err;
     
     assign DBG_LED[0] = (|turfio_err) ? 1'b0 : 1'b1;
-    assign DBG_LED[3:1] = 3'b111;
+    assign DBG_LED[3:1] = 3'b111;    
     
     turfio_wrapper #(.INV_CIN(INV_CIN),
                      .INV_COUT(INV_COUT),
@@ -584,8 +654,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                  
                  .command_o(turf_command),
                  .command_valid_o(turf_command_valid),
-                 .response_i(surf_response),
-                 .response_valid_i(surf_response_valid),
+                 `CONNECT_AXI4S_MIN_IF( s_trig_ , trigger_ ),
                  
                  .dout_data_i(dout_data),
                  .dout_data_valid_i(dout_data_valid),
@@ -616,6 +685,10 @@ module pueo_surf6 #(parameter IDENT="SURF",
                   .gtp_clk_i(gtp_clk),
                   .rxclk_i(rxclk),
                   .rackclk_i(rackclk),
+                  
+                  .adc_sigdet_i(adc_sig_detect),
+                  .adc_cal_frozen_i(adc_cal_frozen),
+                  .adc_cal_freeze_o(adc_cal_freeze),
                   
                   .rundo_sync_i(wbclk_do_sync),
                   .runnoop_live_i(wbclk_noop_live),
@@ -818,7 +891,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                         
                         .ifclk_i(ifclk),
                         
-                        .ch_dat_i(adc_dout),
+                        .ch_dat_i(adc_dout_reg),
                                                 
                         .run_rst_i( run_reset ),
                         .run_stop_i( run_stop ),
@@ -898,6 +971,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
 //                  .RACKCTL_N(TXCLK_N));
 
     generate
+        `ifdef USE_INTERPHI
         if (IBERT == "TRUE") begin : IB
             interphi_ibert_wrapper u_ibert(.INTERPHI_RXP(INTERPHI_RXP),
                                            .INTERPHI_RXN(INTERPHI_RXN),
@@ -907,12 +981,16 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            .gtp_mgtclk_i(gtp_mgtclk),
                                            .gtp_mgtaltclk_i(gtp_mgtaltclk));
         end
+        `endif
     endgenerate
-
+    // savin' every bit of power we can folks
+    wire no_pulse_needed = idctrl_gpo[3] || !idctrl_gpo[4];
     wire pulse;
-    ODDRE1 #(.SRVAL(1'b1)) u_pulse(.C(aclk),.D1(!sync),.D2(1'b1),.SR(1'b0),
+    (* CUSTOM_IGN_DST = "SYSREFCLK" *)
+    ODDRE1 #(.SRVAL(1'b1)) u_pulse(.C(aclk),.D1(!sync),.D2(1'b1),.SR(no_pulse_needed),
                                    .Q(pulse));
-    // purposefully inverted                                   
-    OBUFDS u_pulse_obuf(.I(pulse),.O(PULSE_N),.OB(PULSE_P));
+    // purposefully inverted
+    (* CUSTOM_IGN_DST = "SYSREFCLK" *)
+    OBUFTDS u_pulse_obuf(.I(pulse),.T(no_pulse_needed),.O(PULSE_N),.OB(PULSE_P));
     
 endmodule
