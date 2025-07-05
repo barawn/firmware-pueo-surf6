@@ -17,3 +17,6 @@ set day [string trimleft [lindex $datetime_arr 3] 0 ]
 set firmware_date [expr [expr $year << 9]+[expr $month << 5]+$day]
 
 set_property generic "FIRMWARE_DATE=32'd$firmware_date" [current_fileset]
+
+# Allow easy detection of synthesis in Tcl constraint file
+set are_we_synthesis 1

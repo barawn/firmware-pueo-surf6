@@ -2,6 +2,9 @@
 # These all have escape clauses because clocks sometimes don't exist in the elaboration/synthesis
 # steps.
 
+set we_are_synthesis [info exists are_we_synthesis]
+puts "we are synthesis: $we_are_synthesis"
+
 proc set_cc_paths { srcClk dstClk ctlist } {
     if {$srcClk eq ""} {
         puts "set_cc_paths: No source clock: returning."
@@ -199,88 +202,93 @@ set clktypelist [array get clktypes]
 
 ###### END CLOCK DEFINITIONS
 
-# autoignore the flag_sync module guys
-set sync_flag_regs [get_cells -hier -filter {NAME =~ *FlagToggle_clkA_reg*}]
-set sync_sync_regs [get_cells -hier -filter {NAME =~ *SyncA_clkB_reg*}]
-set sync_syncB_regs [get_cells -hier -filter {NAME =~ *SyncB_clkA_reg*}]
-set_max_delay -datapath_only -from $sync_flag_regs -to $sync_sync_regs 10.000
-set_max_delay -datapath_only -from $sync_sync_regs -to $sync_syncB_regs 10.000
+# EVERYTHING AFTER THIS IS IMPLEMENTATION ONLY
 
-# autoignore the clockmon regs
-set clockmon_level_regs [ get_cells -hier -filter {NAME =~ *u_clkmon/*clk_32x_level_reg*} ]
-set clockmon_cc_regs [ get_cells -hier -filter {NAME =~ *u_clkmon/*level_cdc_ff1_reg*}]
-set clockmon_run_reset_regs [ get_cells -hier -filter {NAME =~ *u_clkmon/clk_running_reset_reg*}]
-set clockmon_run_regs [get_cells -hier -filter {NAME=~ *u_clkmon/*u_clkmon*}]
-set clockmon_run_cc_regs [get_cells -hier -filter {NAME=~ *u_clkmon/clk_running_status_cdc1_reg*}]
-set_max_delay -datapath_only -from $clockmon_level_regs -to $clockmon_cc_regs 10.000
-set_max_delay -datapath_only -from $clockmon_run_reset_regs -to $clockmon_run_regs 10.000
-set_max_delay -datapath_only -from $clockmon_run_regs -to $clockmon_run_cc_regs 10.000
+if { $we_are_synthesis != 1 } {
+    puts "Processing timing constraints."
 
-# weirdo clock transfer regs
-set xfr_src_aclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_SOURCE=="ACLK"}]
-set xfr_src_rxclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_SOURCE=="RXCLK"}]
-set xfr_tgt_aclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_TARGET=="ACLK"}]
-set xfr_tgt_rxclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_TARGET=="RXCLK"}]
-if { [llength $xfr_src_aclk] != 0 } {
+    # autoignore the flag_sync module guys
+    set sync_flag_regs [get_cells -hier -filter {NAME =~ *FlagToggle_clkA_reg*}]
+    set sync_sync_regs [get_cells -hier -filter {NAME =~ *SyncA_clkB_reg*}]
+    set sync_syncB_regs [get_cells -hier -filter {NAME =~ *SyncB_clkA_reg*}]
+    set_max_delay -datapath_only -from $sync_flag_regs -to $sync_sync_regs 10.000
+    set_max_delay -datapath_only -from $sync_sync_regs -to $sync_syncB_regs 10.000
+
+    # autoignore the clockmon regs
+    set clockmon_level_regs [ get_cells -hier -filter {NAME =~ *u_clkmon/*clk_32x_level_reg*} ]
+    set clockmon_cc_regs [ get_cells -hier -filter {NAME =~ *u_clkmon/*level_cdc_ff1_reg*}]
+    set clockmon_run_reset_regs [ get_cells -hier -filter {NAME =~ *u_clkmon/clk_running_reset_reg*}]
+    set clockmon_run_regs [get_cells -hier -filter {NAME=~ *u_clkmon/*u_clkmon*}]
+    set clockmon_run_cc_regs [get_cells -hier -filter {NAME=~ *u_clkmon/clk_running_status_cdc1_reg*}]
+    set_max_delay -datapath_only -from $clockmon_level_regs -to $clockmon_cc_regs 10.000
+    set_max_delay -datapath_only -from $clockmon_run_reset_regs -to $clockmon_run_regs 10.000
+    set_max_delay -datapath_only -from $clockmon_run_regs -to $clockmon_run_cc_regs 10.000
+
+    # weirdo clock transfer regs
+    set xfr_src_aclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_SOURCE=="ACLK"}]
+    set xfr_src_rxclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_SOURCE=="RXCLK"}]
+    set xfr_tgt_aclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_TARGET=="ACLK"}]
+    set xfr_tgt_rxclk [get_cells -hier -filter {CUSTOM_RXCLK_ACLK_TARGET=="RXCLK"}]
+    if { [llength $xfr_src_aclk] != 0 } {
         # FROM sysclk TO rxclk is multicycle b/c rxclk is forward-delayed
         # i.e. we want from clock at 0 to clock at 3.567 b/c *internally* that
         # ends up roughly the same due to the -2.8 ns shift
-#        set_multicycle_path 2 -from $xfr_src_aclk -to $xfr_tgt_rxclk
-#        set_multicycle_path 1 -from $xfr_src_aclk -to $xfr_tgt_rxclk -hold
+	#        set_multicycle_path 2 -from $xfr_src_aclk -to $xfr_tgt_rxclk
+	#        set_multicycle_path 1 -from $xfr_src_aclk -to $xfr_tgt_rxclk -hold
         set_max_delay -datapath_only -from $xfr_src_aclk -to $xfr_tgt_rxclk 1.33
         set_max_delay -datapath_only -from $xfr_src_rxclk -to $xfr_tgt_aclk 1.33
         set_bus_skew -from $xfr_src_rxclk -to $xfr_tgt_aclk 0.1
         # FROM rxclk TO sysclk is NOT multicycle: there we want
         # from clock 0.9 to 2.667.
+    }
+    
+    # and now we use the magics to handle the CC paths in the TURFIO module
+    set_cc_paths $sysclk $psclk $clktypelist
+    set_cc_paths $psclk $sysclk $clktypelist
+
+    set_cc_paths $psclk $clk300 $clktypelist
+    set_cc_paths $clk300 $psclk $clktypelist
+
+    set_cc_paths $psclk $rxclk $clktypelist
+    set_cc_paths $rxclk $psclk $clktypelist
+
+    set_cc_paths $psclk $rackclk $clktypelist
+    set_cc_paths $rackclk $psclk $clktypelist
+    
+    set_cc_paths $psclk $ifclk $clktypelist
+
+    # just ignore the async removal crap
+    set rackrst_src [get_cells -hier -filter { NAME =~ "u_id_ctrl/u_clkmon/clk_running_status_cdc2_reg[5]" }]
+    set rackrst_dst [get_cells -hier -filter { NAME =~ "u_wb_rackctl/u_rackctl_rst" }]
+    set_false_path -from $rackrst_src -to $rackrst_dst
+    
+    # We also have some ignore paths in the RACKctl handling the gigantic tristate times
+    # These are rackclk to rackclk
+    set_ignore_paths $rackclk $rackclk $clktypelist
+
+    #############################################################
+    ##   SYNCHRONOUS CLOCK TRANSFER CONSTRAINTS
+    #############################################################
+    
+    # these COULD be automagically found and run. maybe I'll do that at some point
+    # these are described in the modules they're instantiated in.
+    set_mc_paths ATOP_XFER
+    set_mc_paths ABOT_XFER
+    set_mc_paths BTOP_XFER
+    set_mc_paths BBOT_XFER
+    set_mc_paths CTOP_XFER
+    set_mc_paths CBOT_XFER
+    set_mc_paths URAM_RESET
+    set_mc_paths FW_VALID
+    set_mc_paths FW_DATA
+    
+    set_mc_paths RUNDO_SYNC
+    set_mc_paths RUNRST
+    set_mc_paths RUNSTOP
+    
+    set_mc_paths SYNC
 }
-
-
-# and now we use the magics to handle the CC paths in the TURFIO module
-set_cc_paths $sysclk $psclk $clktypelist
-set_cc_paths $psclk $sysclk $clktypelist
-
-set_cc_paths $psclk $clk300 $clktypelist
-set_cc_paths $clk300 $psclk $clktypelist
-
-set_cc_paths $psclk $rxclk $clktypelist
-set_cc_paths $rxclk $psclk $clktypelist
-
-set_cc_paths $psclk $rackclk $clktypelist
-set_cc_paths $rackclk $psclk $clktypelist
-
-set_cc_paths $psclk $ifclk $clktypelist
-
-# just ignore the async removal crap
-set rackrst_src [get_cells -hier -filter { NAME =~ "u_id_ctrl/u_clkmon/clk_running_status_cdc2_reg[5]" }]
-set rackrst_dst [get_cells -hier -filter { NAME =~ "u_wb_rackctl/u_rackctl_rst" }]
-set_false_path -from $rackrst_src -to $rackrst_dst
-
-# We also have some ignore paths in the RACKctl handling the gigantic tristate times
-# These are rackclk to rackclk
-set_ignore_paths $rackclk $rackclk $clktypelist
-
-#############################################################
-##   SYNCHRONOUS CLOCK TRANSFER CONSTRAINTS
-#############################################################
-
-# these COULD be automagically found and run. maybe I'll do that at some point
-# these are described in the modules they're instantiated in.
-set_mc_paths ATOP_XFER
-set_mc_paths ABOT_XFER
-set_mc_paths BTOP_XFER
-set_mc_paths BBOT_XFER
-set_mc_paths CTOP_XFER
-set_mc_paths CBOT_XFER
-set_mc_paths URAM_RESET
-set_mc_paths FW_VALID
-set_mc_paths FW_DATA
-
-set_mc_paths RUNDO_SYNC
-set_mc_paths RUNRST
-set_mc_paths RUNSTOP
-
-set_mc_paths SYNC
-
+    
 #################################################################
 
 
