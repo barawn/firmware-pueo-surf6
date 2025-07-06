@@ -33,7 +33,7 @@ module surf_trig_gen_v2 #(parameter NBEAMS=48,
         // mask is written stupidly: 30 bits in one register
         // and 18 bits in the other because we're using the A/B registers
         // in a 48-bit pair.
-        input [NBEAMS-1:0] mask_i,
+        input [47:0] mask_i,
         input [1:0] mask_wr_i,
         input mask_update_i,
         input gen_rst_i,
