@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd3,
-                    parameter [7:0] VER_REV = 8'd11,
+                    parameter [7:0] VER_REV = 8'd12,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -457,12 +457,13 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 .adc_dout(adc_dout));
 
     // find a place to embed this
-    wire [47:0] levelone_trigger;
+    localparam NBEAMS = 46;
+    wire [NBEAMS-1:0] levelone_trigger;
     wire [47:0] levelone_mask;
     wire [1:0]  levelone_mask_wr;
     wire        levelone_mask_update;
     wire        trig_gen_reset;
-    L1_trigger_wrapper #(.NBEAMS(46),
+    L1_trigger_wrapper #(.NBEAMS(NBEAMS),
                          .AGC_TIMESCALE_REDUCTION_BITS(1),
                          .USE_BIQUADS(USE_BIQUADS),
                          .WBCLKTYPE(WB_CLK_TYPE),
@@ -500,7 +501,10 @@ module pueo_surf6 #(parameter IDENT="SURF",
                          .clkA(wb_clk),
                          .clkB(ifclk));                                                  
     surf_trig_gen_v2 #(.ACLKTYPE("SYSREFCLK"),
-                       .IFCLKTYPE("IFCLK"))
+                       .IFCLKTYPE("IFCLK"),
+                       .DEBUG("TRUE"),
+                       .TRIG_CLOCKDOMAIN("ACLK"),
+                       .NBEAMS(NBEAMS))
         u_triggen(.aclk(aclk),
                   .aclk_phase_i(aclk_phase),
                   .trig_i(levelone_trigger),
