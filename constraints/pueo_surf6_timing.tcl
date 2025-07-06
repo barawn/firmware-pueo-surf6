@@ -286,6 +286,8 @@ if { $we_are_synthesis != 1 } {
     set_mc_paths RUNRST
     set_mc_paths RUNSTOP
     
+    set_mc_paths TRIG_TO_IFCLK
+    
     set_mc_paths SYNC
 }
     

@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd3,
-                    parameter [7:0] VER_REV = 8'd10,
+                    parameter [7:0] VER_REV = 8'd11,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -484,21 +484,23 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire run_reset;
     wire run_stop;
     
+    // these are all captured in ifclk now
     wire [1:0] levelone_mask_wr_aclk;
     wire levelone_mask_update_aclk;
     flag_sync u_wr0_sync(.in_clkA(levelone_mask_wr[0]),
                          .out_clkB(levelone_mask_wr_aclk[0]),
                          .clkA(wb_clk),
-                         .clkB(aclk));
+                         .clkB(ifclk));
     flag_sync u_wr1_sync(.in_clkA(levelone_mask_wr[1]),
                          .out_clkB(levelone_mask_wr_aclk[1]),
                          .clkA(wb_clk),
-                         .clkB(aclk));
+                         .clkB(ifclk));
     flag_sync u_upd_sync(.in_clkA(levelone_mask_update),
                          .out_clkB(levelone_mask_update_aclk),
                          .clkA(wb_clk),
-                         .clkB(aclk));                                                  
-    surf_trig_gen #(.ACLKTYPE("SYSREFCLK"))
+                         .clkB(ifclk));                                                  
+    surf_trig_gen_v2 #(.ACLKTYPE("SYSREFCLK"),
+                       .IFCLKTYPE("IFCLK"))
         u_triggen(.aclk(aclk),
                   .aclk_phase_i(aclk_phase),
                   .trig_i(levelone_trigger),
