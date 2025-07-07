@@ -207,13 +207,12 @@ module surf_trig_gen_v2 #(parameter NBEAMS=48,
             end                
             triggen_ila u_ila(.clk(ifclk),
                               .probe0(trigger_in_ifclk),
-                              .probe1(trig_tdata),
+                              .probe1(trig_tdata[31:16]),
                               .probe2(trig_tready),
                               .probe3(trig_tvalid),
                               .probe4(trig_write),
-                              .probe5(mask_rereg),
-                              .probe6(mask_wr_i),
-                              .probe7(mask_update_i));
+                              .probe5(current_address),
+                              .probe6(trig_running));
         end
     endgenerate
 endmodule
