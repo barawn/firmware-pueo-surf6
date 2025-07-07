@@ -164,6 +164,7 @@ module surf_trig_gen_v2 #(parameter NBEAMS=48,
                    .PATTERNDETECT(not_trigger));
                                                        
     always @(posedge ifclk) begin
+        trig_gen_rst <= { trig_gen_rst[0], gen_rst_i };
 
         if (trig_gen_rst[1]) trigger <= 1'b0;
         else trigger <= !not_trigger;
@@ -199,12 +200,20 @@ module surf_trig_gen_v2 #(parameter NBEAMS=48,
 
     generate
         if (DEBUG == "TRUE") begin : ILA
+            (* CUSTOM_CC_DST = IFCLKTYPE *)
+            reg [47:0] mask_rereg = {48{1'b0}};
+            always @(posedge ifclk) begin : RR
+                mask_rereg <= mask_i;
+            end                
             triggen_ila u_ila(.clk(ifclk),
                               .probe0(trigger_in_ifclk),
                               .probe1(trig_tdata),
                               .probe2(trig_tready),
                               .probe3(trig_tvalid),
-                              .probe4(trig_write));
+                              .probe4(trig_write),
+                              .probe5(mask_rereg),
+                              .probe6(mask_wr_i),
+                              .probe7(mask_update_i));
         end
     endgenerate
 endmodule
