@@ -62,7 +62,9 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
                            parameter NBIT_IN = 72,
                            parameter BEGIN_PHASE = 1,
                            parameter DOUT_LATENCY = 6,
-                           parameter DEBUG = "TRUE")(
+                           parameter DEBUG = "TRUE",
+                           parameter MEMCLKTYPE = "NONE",
+                           parameter IFCLKTYPE = "NONE")(
         input memclk_i,
         input memclk_rst_i,
         input begin_i,
@@ -142,6 +144,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     reg [2:0] write_buffer = {3{1'b0}};
     // This is the *completed* buffer pointer. This gets incremented
     // when the last channel finishes.
+    (* CUSTOM_GRAY_SRC = MEMCLKTYPE, DONT_TOUCH = "TRUE" *)
     reg [2:0] complete_buffer_pointer = {3{1'b0}};
     // The reason we have 2 buffer pointers is because our control logic
     // is pipelined. We could probably just start reading out early,
@@ -277,6 +280,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     // current read buffer
     reg [2:0] read_buffer = {3{1'b0}};
     // write buffer in read domain
+    (* CUSTOM_GRAY_DST = IFCLKTYPE *)
     reg [2:0] completed_ifclk_sync = {3{1'b0}};
     // actual version to use
     reg [2:0] completed_buffer = {3{1'b0}};
