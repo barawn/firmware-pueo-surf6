@@ -81,9 +81,9 @@ module uram_event_readout_sm(
     localparam [FSM_BITS-1:0] FW1                       = 9;  // 9
     localparam [FSM_BITS-1:0] FW2                       = 10;  // 10
     localparam [FSM_BITS-1:0] FW3                       = 11;  // 11
-    (* CUSTOM_MC_DST_TAG = "FW_VALID" *)
+    (* CUSTOM_MC_DST_TAG = "FW_VALID", FSM_ENCODING = "user_encoding" *)
     reg [FSM_BITS-1:0] state = HEADER0;
-
+    (* CUSTOM_MC_DST_TAG = "FW_VALID" *)
     reg [6:0] bram_uaddr = {7{1'b0}};
     wire [7:0] bram_uaddr_next = bram_uaddr + 1;
 
