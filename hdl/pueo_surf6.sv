@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd4,
-                    parameter [7:0] VER_REV = 8'd21,
+                    parameter [7:0] VER_REV = 8'd20,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -457,7 +457,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 .adc_dout(adc_dout));
 
     // find a place to embed this
-    localparam NBEAMS = 2;
+    localparam NBEAMS = 46;
     wire [NBEAMS-1:0] levelone_trigger;
     wire [47:0] levelone_mask;
     wire [1:0]  levelone_mask_wr;
