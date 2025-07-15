@@ -10,7 +10,9 @@
 // DUMB ATTEMPT TO GET THINGS WORKING
 module pueo_wrapper #(parameter NBITS=12,
                       parameter NSAMP=8,
-                      parameter NCHAN=8)(
+                      parameter NCHAN=8,
+                      parameter MEMCLKTYPE = "NONE",
+                      parameter IFCLKTYPE = "NONE")(
         // aclk_sync_i are memclk_sync_i come from the sync gen
         // NOT from the command processor. These are not do_sync!
         input aclk_i,
@@ -120,7 +122,9 @@ module pueo_wrapper #(parameter NBITS=12,
     flag_sync u_mark1(.in_clkA(fw_mark_i[1]),.out_clkB(mark_ifclk[1]),
                       .clkA(aclk_i),.clkB(ifclk_i));                      
     // OH DEAR GOD THIS IS AWKWARD!!
-    uram_event_buffer_v3 #(.DEBUG("FALSE"))
+    uram_event_buffer_v3 #(.DEBUG("FALSE"),
+                           .MEMCLKTYPE(MEMCLKTYPE),
+                           .IFCLKTYPE(IFCLKTYPE))
                       u_evbuf( .memclk_i(memclk_i),
                                .memclk_rst_i(event_reset_memclk),
                                .aclk_i(aclk_i),
