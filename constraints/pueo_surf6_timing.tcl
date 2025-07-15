@@ -188,6 +188,9 @@ set clktypes($gtpclk3) GTPCLK
 set ifclk [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "ifclk"}]]
 set clktypes($ifclk) IFCLK
 
+set memclk [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "memclk" }]]
+set clktypes($memclk) MEMCLK
+
 set clk300 [get_clocks -of_objects [get_nets -hier -filter { NAME =~ "clk300"}]]
 set clktypes($clk300) CLK300
 
@@ -256,6 +259,8 @@ if { $we_are_synthesis != 1 } {
     set_cc_paths $rackclk $psclk $clktypelist
     
     set_cc_paths $psclk $ifclk $clktypelist
+
+    set_gray_paths $memclk $ifclk $clktypelist
 
     # just ignore the async removal crap
     set rackrst_src [get_cells -hier -filter { NAME =~ "u_id_ctrl/u_clkmon/clk_running_status_cdc2_reg[5]" }]
