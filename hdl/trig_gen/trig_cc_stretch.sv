@@ -18,7 +18,7 @@ module trig_cc_stretch #(parameter NBEAMS=2)(
         for (i=0;i<NBEAMS;i=i+1) begin : LP
             reg trig_rereg = 0;
             reg trig_stretch = 0;
-            (* CUSTOM_MC_SRC_TAG = "TRIG_TO_IFCLK", CUSTOM_MC_SRC_MIN = "0.0", CUSTOM_MC_SRC_MAX = "3.0" *)
+            (* CUSTOM_MC_SRC_TAG = "TRIG_TO_IFCLK", CUSTOM_MC_MIN = "0.0", CUSTOM_MC_MAX = "3.0" *)
             reg trig_to_ifclk = 0;
             (* CUSTOM_MC_DST_TAG = "TRIG_TO_IFCLK" *)
             reg trig_in_ifclk = 0;
