@@ -290,6 +290,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     wire readout_complete;
 
     wire [7:0] last_data;
+    (* CUSTOM_MC_DST_TAG = "EVBUF_HEADER_SELECT EVBUF_HEADER_DATA EVBUF_DATA" *)
     reg [7:0]  event_data = {8{1'b0}};
     wire       event_valid;
         
@@ -352,6 +353,14 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     (* CUSTOM_CC_DST = "IFCLK" *)
     reg [1:0] loading_fw = {2{1'b0}};
     
+    (* CUSTOM_MC_SRC_TAG = "EVBUF_HEADER_SELECT", CUSTOM_MC_MIN = "0", CUSTOM_MC_MAX = "2.0" *)
+    reg select_header_data_pipe = 0;
+    (* CUSTOM_MC_SRC_TAG = "EVBUF_HEADER_DATA", CUSTOM_MC_MIN = "0", CUSTOM_MC_MAX = "2.0" *)
+    reg [7:0] header_data_pipe = {8{1'b0}};
+    (* CUSTOM_MC_SRC_TAG = "EVBUF_DATA", CUSTOM_MC_MIN = "0", CUSTOM_MC_MAX = "2.0" *)
+    reg [7:0] last_data_pipe = {8{1'b0}};
+    reg valid_pipe = 0;
+    
     always @(posedge ifclk_i) begin
         loading_fw <= `DLYFF { loading_fw[0], fw_load_i };
 
@@ -391,10 +400,22 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
             endcase
         end                       
         
+        // OK OK OK - I COMPLETELY AND TOTALLY HATE THIS HACK _BUT_
+        // I don't want to touch that state machine thing AT ALL.
+        // So here's what we're doing:
+        // we actually REREGISTER select_header_data with dout_data_phase_i
+        // and REREGISTER header_data_remap and last_data the same way.        
         if (dout_data_phase_i) begin
-            // FIX THIS REVERSE THE ORDER
-            if (select_header_data) event_data <= `DLYFF header_data_remap[header_data_addr[1:0]];
-            else event_data <= `DLYFF last_data;
+            select_header_data_pipe <= `DLYFF select_header_data;
+            header_data_pipe <= `DLYFF header_data_remap[header_data_addr[1:0]];
+            last_data_pipe <= `DLYFF last_data;
+            valid_pipe <= event_valid;
+        end
+
+        if (dout_data_phase_i) begin
+            // FIX THIS REVERSE THE ORDER --- I DON'T KNOW WHAT THIS COMMENT MEANT            
+            if (select_header_data_pipe) event_data <= `DLYFF header_data_pipe;
+            else event_data <= `DLYFF last_data_pipe;
         end
 //        if (dout_data_phase_i) begin
 //            event_data_valid <= `DLYFF (state == IDLE_HEADER0_ADDR1) ? data_available : !state[3];
@@ -630,7 +651,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     endgenerate        
     
     assign dout_data_o = event_data;
-    assign dout_data_valid_o= event_valid;
+    assign dout_data_valid_o= valid_pipe;
     // screw this for now
     assign dout_data_last_o = 1'b0;
         
