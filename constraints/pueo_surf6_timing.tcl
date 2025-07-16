@@ -274,26 +274,40 @@ if { $we_are_synthesis != 1 } {
     #############################################################
     ##   SYNCHRONOUS CLOCK TRANSFER CONSTRAINTS
     #############################################################
+
+    # AUTOMATIC MULTICYCLE PATH FINDING
+    set mc_sources [get_cells -hier -filter { CUSTOM_MC_SRC_TAG != "" }]
+    set mc_all_tags {}
+    foreach cell $mc_sources {
+        lappend mc_all_tags [get_property CUSTOM_MC_SRC_TAG $cell]
+    }
+    set mc_tags [ lsort -unique $mc_all_tags ]
+    foreach tag $mc_tags {
+        puts "Handling multicycle tag $tag"
+        set_mc_paths $tag
+    }
     
-    # these COULD be automagically found and run. maybe I'll do that at some point
-    # these are described in the modules they're instantiated in.
-    set_mc_paths ATOP_XFER
-    set_mc_paths ABOT_XFER
-    set_mc_paths BTOP_XFER
-    set_mc_paths BBOT_XFER
-    set_mc_paths CTOP_XFER
-    set_mc_paths CBOT_XFER
-    set_mc_paths URAM_RESET
-    set_mc_paths FW_VALID
-    set_mc_paths FW_DATA
+#    set_mc_paths ATOP_XFER
+#    set_mc_paths ABOT_XFER
+#    set_mc_paths BTOP_XFER
+#    set_mc_paths BBOT_XFER
+#    set_mc_paths CTOP_XFER
+#    set_mc_paths CBOT_XFER
+#    set_mc_paths URAM_RESET
+#    set_mc_paths FW_VALID
+#    set_mc_paths FW_DATA
     
-    set_mc_paths RUNDO_SYNC
-    set_mc_paths RUNRST
-    set_mc_paths RUNSTOP
+#    set_mc_paths RUNDO_SYNC
+#    set_mc_paths RUNRST
+#    set_mc_paths RUNSTOP
     
-    set_mc_paths TRIG_TO_IFCLK
+#    set_mc_paths TRIG_TO_IFCLK
     
-    set_mc_paths SYNC
+#    set_mc_paths SYNC
+    
+#    set_mc_paths EVBUF_HEADER_SELECT
+#    set_mc_paths EVBUF_HEADER_DATA
+#    set_mc_paths EVBUF_DATA
 }
     
 #################################################################
