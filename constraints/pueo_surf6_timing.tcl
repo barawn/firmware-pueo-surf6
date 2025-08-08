@@ -259,6 +259,7 @@ if { $we_are_synthesis != 1 } {
     set_cc_paths $rackclk $psclk $clktypelist
     
     set_cc_paths $psclk $ifclk $clktypelist
+    set_cc_paths $ifclk $psclk $clktypelist
 
     set_gray_paths $memclk $ifclk $clktypelist
 
