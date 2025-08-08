@@ -277,7 +277,9 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     // This makes this a little less efficient than it could be
     // but whatever.
 
-    // current read buffer
+    // current read buffer. This is gray encoded and Xilinx is batshit dumb
+    // it sees a case and just has to reencode it
+    (* DONT_TOUCH = "TRUE" *)
     reg [2:0] read_buffer = {3{1'b0}};
     // write buffer in read domain
     (* CUSTOM_GRAY_DST = IFCLKTYPE *)
