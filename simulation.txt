@@ -1,9 +1,14 @@
 verilog-library-barawn/sim/tb_rclock.sv
-sim/pueo_wrapper_tb.sv
+hdl/pueo-surf-trigger/sim/wb_threshold_tb.sv
+verilog-library-barawn/sim/preset_timer_tb.sv
+hdl/pueo-surf-trigger/sim/dual_pueo_envelope_v2_tb.sv
+sim/lp_sim.sv
 hdl/pueo-surf-trigger/sim/L1_trigger_loop_tb.sv
+sim/L1_intercon_tb.sv
 sim/pueo_readout_tb.v
 sim/boardman_v2_sm_tb.sv
 sim/fwu_uaddr_tb.sv
-sim/lp_sim.sv
 sim/pueo_uram_v3_tb.sv
-sim/L1_intercon_tb.sv
+sim/pueo_wrapper_tb.sv
+verilog-library-barawn/sim/shannon_whitaker_lpfull_tb.sv
+hdl/pueo-surf-trigger/sim/beamscaler_tb.sv

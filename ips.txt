@@ -1,5 +1,6 @@
 ip/fifo/addr_fifo/addr_fifo.xci
 ip/debug/align_ila/align_ila.xci
+ip/debug/beam_ila/beam_ila.xci
 ip/debug/boardman_ila/boardman_ila.xci
 ip/debug/cin_ila/cin_ila.xci
 ip/fifo/cmd_fifo/cmd_fifo.xci
@@ -17,6 +18,8 @@ ip/interphi/interphi_ibert/interphi_ibert.xci
 ip/interphi/interphi_ibert10/interphi_ibert10.xci
 ip/debug/lock_ila/lock_ila.xci
 ip/clock/memclk_pll/memclk_pll.xci
+hdl/pueo-surf-trigger/ip/preset_timer_dsp/preset_timer_dsp.xci
+hdl/pueo-surf-trigger/ip/preset_timer_hold_dsp/preset_timer_hold_dsp.xci
 ip/debug/rackctl_ila/rackctl_ila.xci
 ip/debug/raw_ila/raw_ila.xci
 ip/rf/rfdc_gen1/rfdc_gen1.xci
