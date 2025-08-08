@@ -15,8 +15,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
-                    parameter [3:0] VER_MINOR = 4'd4,
-                    parameter [7:0] VER_REV = 8'd24,
+                    parameter [3:0] VER_MINOR = 4'd5,
+                    parameter [7:0] VER_REV = 8'd1,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -456,66 +456,89 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 .dac_out_n(DAC_OUT_N),
                 .adc_dout(adc_dout));
 
-    // find a place to embed this
-    localparam NBEAMS = 46;
-    wire [NBEAMS-1:0] levelone_trigger;
-    wire [47:0] levelone_mask;
-    wire [1:0]  levelone_mask_wr;
-    wire        levelone_mask_update;
-    wire        trig_gen_reset;
-    L1_trigger_wrapper #(.NBEAMS(NBEAMS),
-                         .AGC_TIMESCALE_REDUCTION_BITS(1),
-                         .USE_BIQUADS(USE_BIQUADS),
-                         .WBCLKTYPE(WB_CLK_TYPE),
-                         .CLKTYPE("SYSREFCLK"))
-        u_trigger(.wb_clk_i(wb_clk),
-                  .wb_rst_i(!tclock_ready),
-                  `CONNECT_WBS_IFM( wb_ , levelone_ ),
-                  .mask_o(levelone_mask),
-                  .mask_wr_o(levelone_mask_wr),
-                  .mask_update_o(levelone_mask_update),
-                  .gen_rst_o(trig_gen_reset),
-                  // i dunno what this does lol
-                  .reset_i(1'b0),
-                  .aclk(tclk),
-                  .dat_i(trig_dout_reg),
-                  .trigger_o(levelone_trigger));
-
-    `DEFINE_AXI4S_MIN_IF( trigger_ , 32 );
+    // The V2 levelone has the generator embedded inside it.
+    localparam NBEAMS = 2;
     wire run_reset;
     wire run_stop;
-    
-    // these are all captured in ifclk now
-    wire [1:0] levelone_mask_wr_aclk;
-    wire levelone_mask_update_aclk;
-    flag_sync u_wr0_sync(.in_clkA(levelone_mask_wr[0]),
-                         .out_clkB(levelone_mask_wr_aclk[0]),
-                         .clkA(wb_clk),
-                         .clkB(ifclk));
-    flag_sync u_wr1_sync(.in_clkA(levelone_mask_wr[1]),
-                         .out_clkB(levelone_mask_wr_aclk[1]),
-                         .clkA(wb_clk),
-                         .clkB(ifclk));
-    flag_sync u_upd_sync(.in_clkA(levelone_mask_update),
-                         .out_clkB(levelone_mask_update_aclk),
-                         .clkA(wb_clk),
-                         .clkB(ifclk));                                                  
-    surf_trig_gen_v2 #(.ACLKTYPE("SYSREFCLK"),
-                       .IFCLKTYPE("IFCLK"),
-                       .DEBUG("TRUE"),
-                       .TRIG_CLOCKDOMAIN("ACLK"),
-                       .NBEAMS(NBEAMS))
-        u_triggen(.aclk(aclk),
+    `DEFINE_AXI4S_MIN_IF( trigger_ , 32 );
+
+    L1_trigger_wrapper_v2 #(.NBEAMS(NBEAMS),
+                            .AGC_TIMESCALE_REDUCTION_BITS(1),
+                            .USE_BIQUADS(USE_BIQUADS),
+                            .WBCLKTYPE(WB_CLK_TYPE),
+                            .CLKTYPE("SYSREFCLK"),
+                            .IFCLKTYPE("IFCLK"))
+        u_trigger(.wb_clk_i(wb_clk),
+                  .wb_rst_i(!tclock_ready),
+                  `CONNECT_WBS_IFM(wb_ , levelone_ ),
+                  .aclk(aclk),
                   .aclk_phase_i(aclk_phase),
-                  .trig_i(levelone_trigger),
-                  .mask_i(levelone_mask),
-                  .mask_wr_i(levelone_mask_wr_aclk),
-                  .mask_update_i(levelone_mask_update_aclk),
-                  .gen_rst_i(trig_gen_reset),
+                  .tclk(tclk),
+                  .dat_i(trig_dout_reg),
                   .ifclk(ifclk),
+                  .ifclk_running_i(clocks_ready),
                   .runrst_i(run_reset),
                   .runstop_i(run_stop),
-                  `CONNECT_AXI4S_MIN_IF(trig_ , trigger_ ));
+                  `CONNECT_AXI4S_MIN_IF(m_trig_ , trigger_ ));                  
+                                              
+//    wire [NBEAMS-1:0] levelone_trigger;
+//    wire [47:0] levelone_mask;
+//    wire [1:0]  levelone_mask_wr;
+//    wire        levelone_mask_update;
+//    wire        trig_gen_reset;
+//    L1_trigger_wrapper #(.NBEAMS(NBEAMS),
+//                         .AGC_TIMESCALE_REDUCTION_BITS(1),
+//                         .USE_BIQUADS(USE_BIQUADS),
+//                         .WBCLKTYPE(WB_CLK_TYPE),
+//                         .CLKTYPE("SYSREFCLK"))
+//        u_trigger(.wb_clk_i(wb_clk),
+//                  .wb_rst_i(!tclock_ready),
+//                  `CONNECT_WBS_IFM( wb_ , levelone_ ),
+//                  .mask_o(levelone_mask),
+//                  .mask_wr_o(levelone_mask_wr),
+//                  .mask_update_o(levelone_mask_update),
+//                  .gen_rst_o(trig_gen_reset),
+//                  // i dunno what this does lol
+//                  .reset_i(1'b0),
+//                  .aclk(tclk),
+//                  .dat_i(trig_dout_reg),
+//                  .trigger_o(levelone_trigger));
+
+//    `DEFINE_AXI4S_MIN_IF( trigger_ , 32 );
+//    wire run_reset;
+//    wire run_stop;
+    
+//    // these are all captured in ifclk now
+//    wire [1:0] levelone_mask_wr_aclk;
+//    wire levelone_mask_update_aclk;
+//    flag_sync u_wr0_sync(.in_clkA(levelone_mask_wr[0]),
+//                         .out_clkB(levelone_mask_wr_aclk[0]),
+//                         .clkA(wb_clk),
+//                         .clkB(ifclk));
+//    flag_sync u_wr1_sync(.in_clkA(levelone_mask_wr[1]),
+//                         .out_clkB(levelone_mask_wr_aclk[1]),
+//                         .clkA(wb_clk),
+//                         .clkB(ifclk));
+//    flag_sync u_upd_sync(.in_clkA(levelone_mask_update),
+//                         .out_clkB(levelone_mask_update_aclk),
+//                         .clkA(wb_clk),
+//                         .clkB(ifclk));                                                  
+//    surf_trig_gen_v2 #(.ACLKTYPE("SYSREFCLK"),
+//                       .IFCLKTYPE("IFCLK"),
+//                       .DEBUG("TRUE"),
+//                       .TRIG_CLOCKDOMAIN("ACLK"),
+//                       .NBEAMS(NBEAMS))
+//        u_triggen(.aclk(aclk),
+//                  .aclk_phase_i(aclk_phase),
+//                  .trig_i(levelone_trigger),
+//                  .mask_i(levelone_mask),
+//                  .mask_wr_i(levelone_mask_wr_aclk),
+//                  .mask_update_i(levelone_mask_update_aclk),
+//                  .gen_rst_i(trig_gen_reset),
+//                  .ifclk(ifclk),
+//                  .runrst_i(run_reset),
+//                  .runstop_i(run_stop),
+//                  `CONNECT_AXI4S_MIN_IF(trig_ , trigger_ ));
     
                 
     // these are commands + trigger in
