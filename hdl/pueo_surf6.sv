@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd5,
-                    parameter [7:0] VER_REV = 8'd7,
+                    parameter [7:0] VER_REV = 8'd6,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -457,7 +457,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 .adc_dout(adc_dout));
 
     // The V2 levelone has the generator embedded inside it.
-    localparam NBEAMS = 2;
+    localparam NBEAMS = 46;
     wire run_reset;
     wire run_stop;
     `DEFINE_AXI4S_MIN_IF( trigger_ , 32 );
