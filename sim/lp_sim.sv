@@ -23,13 +23,22 @@
 module lp_sim;
 
     wire clk;
-    tb_rclk #(.PERIOD(2)) u_clk(.clk(clk));
+    tb_rclk #(.PERIOD(2.667)) u_clk(.clk(clk));
+
+    reg [1:0] clk_phase = {2{1'b0}};
+    wire this_clk_phase = clk_phase == 2'b00;
+    always @(posedge clk) begin
+        if (clk_phase == 2'b10) clk_phase <= #0.01 2'b00;
+        else clk_phase <= #0.01 clk_phase + 1;
+    end
     
     reg [7:0][11:0] adc_indata = {96{1'b0}};
     wire [47:0] tmp_out;
 
     reg rst = 0;
     wire [7:0][12:0] filt0_out;
+
+    wire [3:0][12:0] filt1_out;
 
     wire [7:0][15:0] systA_out;
     wire [7:0][15:0] systA1_out;
@@ -73,6 +82,16 @@ module lp_sim;
                                    .rst_i(rst),
                                    .dat_i(adc_indata),
                                    .dat_o(filt0_out));
+
+    twothirds_lpfull #(.INBITS(12))
+        twothirds(.clk_i(clk),
+                  .clk_phase_i(this_clk_phase),
+                  .rst_i(rst),
+                  .dat_i({ adc_indata[6],
+                           adc_indata[4],
+                           adc_indata[2],
+                           adc_indata[0] }),
+                  .dat_o(filt1_out));
 
     initial begin
         #100;
