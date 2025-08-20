@@ -34,6 +34,7 @@ hdl/pueo-surf-trigger/hdl/agc_core.sv
 hdl/pueo-surf-trigger/hdl/agc_dsp.sv
 hdl/pueo-surf-trigger/hdl/agc_wrapper.sv
 hdl/pueo-surf-trigger/hdl_v2/beamform_trigger_v2.sv
+hdl/pueo-surf-trigger/hdl_v2/beamform_trigger_v2b.sv
 hdl/pueo-surf-trigger/hdl_v2/beamscaler.sv
 hdl/pueo-surf-trigger/hdl_v2/beamscaler_wb_wrap.sv
 hdl/pueo-surf-trigger/hdl_v2/beamscaler_wrap.sv
@@ -64,12 +65,14 @@ hdl/turfio/rackctl_rxctl_sm_v1.sv
 hdl/rf/rfdc_sync.sv
 hdl/rf/rfdc_wrapper.sv
 hdl/turfio/rxclk_aclk_transfer.sv
+hdl/pueo-surf-trigger/hdl_v2/sample_store.sv
 hdl/pueo-surf-trigger/hdl/saturate_and_scale.sv
 verilog-library-barawn/hdl/filters/shannon_whitaker_lpfull_v2.sv
 verilog-library-barawn/hdl/filters/shannon_whitaker_lpfull_v3.sv
 verilog-library-barawn/hdl/math/signed_8b_square.sv
 hdl/clock/simple_clock_mon.sv
 verilog-library-barawn/hdl/math/square_5bit_accumulator.sv
+hdl/pueo-surf-trigger/hdl_v2/sub_beam.sv
 hdl/surf6_fwu_marker.sv
 hdl/surf6_mode1_monitor.sv
 hdl/surf_id_ctrl/surf_id_ctrl.sv
@@ -114,3 +117,7 @@ hdl/uram/uram_sync_dsptransfer.sv
 verilog-library-barawn/hdl/filters/systC_matched_filter_v2.sv
 verilog-library-barawn/hdl/filters/systA_matched_filter_v2.sv
 verilog-library-barawn/hdl/filters/systB_matched_filter_v2.sv
+verilog-library-barawn/hdl/filters/lp_four_to_six.sv
+verilog-library-barawn/hdl/filters/lp_six_to_four.sv
+verilog-library-barawn/hdl/filters/twothirds_lpfull.sv
+verilog-library-barawn/hdl/filters/fivetap_systolic_preadd.sv

@@ -1,6 +1,7 @@
 ip/fifo/addr_fifo/addr_fifo.xci
 ip/debug/align_ila/align_ila.xci
 ip/debug/beam_ila/beam_ila.xci
+ip/debug/beamscaler_ila/beamscaler_ila.xci
 ip/debug/boardman_ila/boardman_ila.xci
 ip/debug/cin_ila/cin_ila.xci
 ip/fifo/cmd_fifo/cmd_fifo.xci
