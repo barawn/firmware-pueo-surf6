@@ -210,6 +210,10 @@ set clktypelist [array get clktypes]
 if { $we_are_synthesis != 1 } {
     puts "Processing timing constraints."
 
+    puts "Overconstraining memclk."
+    set_clock_uncertainty -from $memclk -to $memclk 0.05
+    set_clock_uncertainty -from $sysclk -to $memclk 0.05
+
     # autoignore the flag_sync module guys
     set sync_flag_regs [get_cells -hier -filter {NAME =~ *FlagToggle_clkA_reg*}]
     set sync_sync_regs [get_cells -hier -filter {NAME =~ *SyncA_clkB_reg*}]
