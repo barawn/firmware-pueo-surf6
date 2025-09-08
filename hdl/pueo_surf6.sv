@@ -16,7 +16,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd5,
-                    parameter [7:0] VER_REV = 8'd14,
+                    parameter [7:0] VER_REV = 8'd18,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -304,19 +304,19 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire wbclk_do_sync;
     // indicates in a register whether a valid NOOP_LIVE has been seen.
     wire wbclk_noop_live;
-    
-    wire ifclk_locked;
-    wire memclk_locked;
-    wire aclk_locked = ifclk_locked && memclk_locked;
-    // These need to be PLLs because we use the MMCM for RXCLK phase shifting
-    ifclk_pll u_ifclk(.clk_in1(aclk_in),.reset(aclk_reset),
-                      .clk_out1(ifclk),
-                      .clk_out2(ifclk_x2),
-                      .locked(ifclk_locked));
-    memclk_pll u_memclk(.clk_in1(aclk_in),.reset(aclk_reset),
-                        .clk_out1(memclk),
-                        .locked(memclk_locked));
-                        
+
+    // Factor out the clocks into their own module
+    // to allow us to test swapping them.
+    wire aclk_locked;    
+    clock_generator #(.MODE("PLL"))
+        u_clkgen(.aclk_in_i(aclk_in),
+                 .aclk_i(aclk),
+                 .rst_i(aclk_reset),
+                 .ifclk_o(ifclk),
+                 .ifclk_x2_o(ifclk_x2),
+                 .memclk_o(memclk),
+                 .locked_o(aclk_locked));
+                            
     // Note that we DO NOT use the PS's AXI4 interface!
     // Why? Because it both costs quite a bit of logic, and we would need
     // to mux in our own interface from the SFC to access the same space.
