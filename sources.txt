@@ -42,6 +42,7 @@ verilog-library-barawn/hdl/filters/biquad8_wrapper.sv
 hdl/pueo-surf-trigger/hdl/biquad8_x2_wrapper.sv
 hdl/turfio/bit_align.sv
 hdl/serial_if/boardman_wrapper.sv
+hdl/clock/clock_generator.sv
 hdl/cmdproc_buffer.sv
 hdl/pueo-surf-trigger/hdl_v2/dual_pueo_beam_v2.sv
 hdl/pueo-surf-trigger/hdl_v2/dual_pueo_beamform_v2.sv
@@ -56,6 +57,7 @@ hdl/pueo-surf-trigger/hdl_v2/generator_wb_core.sv
 hdl/pueo-surf-trigger/hdl_v2/generator_wrap.sv
 hdl/pueo-surf-trigger/hdl/lfsr_rms_mux.sv
 verilog-library-barawn/hdl/filters/matched_filter.sv
+verilog-library-barawn/hdl/filters/matched_filter_v2.sv
 hdl/pueo-surf-trigger/hdl_v2/preset_timer.sv
 hdl/pueo-surf-trigger/hdl/probit_accumulator.sv
 hdl/pueo_command_decoder.sv
@@ -79,6 +81,9 @@ hdl/surf_id_ctrl/surf_id_ctrl.sv
 hdl/surf_intercon.sv
 hdl/turfio/surf_sync_gen.sv
 hdl/pueo-surf-trigger/hdl_v2/surf_trig_gen_v2.sv
+verilog-library-barawn/hdl/filters/systA_matched_filter_v2.sv
+verilog-library-barawn/hdl/filters/systB_matched_filter_v2.sv
+verilog-library-barawn/hdl/filters/systC_matched_filter_v2.sv
 hdl/trig_gen/trig_cc_stretch.sv
 hdl/pueo-surf-trigger/hdl/trigger_chain_wrapper.sv
 hdl/pueo-surf-trigger/hdl/trigger_chain_x8_wrapper.sv
@@ -114,10 +119,9 @@ hdl/interphi/interphi_ibert_wrapper.sv
 verilog-library-barawn/hdl/math/seven_bit_square.sv
 hb.coe
 hdl/uram/uram_sync_dsptransfer.sv
-verilog-library-barawn/hdl/filters/systC_matched_filter_v2.sv
-verilog-library-barawn/hdl/filters/systA_matched_filter_v2.sv
-verilog-library-barawn/hdl/filters/systB_matched_filter_v2.sv
 verilog-library-barawn/hdl/filters/lp_four_to_six.sv
 verilog-library-barawn/hdl/filters/lp_six_to_four.sv
 verilog-library-barawn/hdl/filters/twothirds_lpfull.sv
 verilog-library-barawn/hdl/filters/fivetap_systolic_preadd.sv
+hdl/pueo-surf-trigger/hdl_v3/beam_meta_nybble.sv
+hdl/pueo-surf-trigger/hdl_v3/beamform_trigger_v3.sv

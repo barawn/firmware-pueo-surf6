@@ -17,6 +17,7 @@ ip/debug/intercon_ila/intercon_ila.xci
 ip/interphi/interphi_aurora/interphi_aurora.xci
 ip/interphi/interphi_ibert/interphi_ibert.xci
 ip/interphi/interphi_ibert10/interphi_ibert10.xci
+ip/debug/l1_intercon_ila/l1_intercon_ila.xci
 ip/debug/lock_ila/lock_ila.xci
 ip/clock/memclk_pll/memclk_pll.xci
 hdl/pueo-surf-trigger/ip/preset_timer_dsp/preset_timer_dsp.xci
@@ -27,6 +28,7 @@ ip/rf/rfdc_gen1/rfdc_gen1.xci
 ip/rf/rfdc_gen3/rfdc_gen3.xci
 ip/debug/rfdc_sync_ila/rfdc_sync_ila.xci
 ip/clock/sysclk_wiz/sysclk_wiz.xci
+ip/clock/sysclk_wiz2/sysclk_wiz2.xci
 ip/fifo/trig_gen_fifo/trig_gen_fifo.xci
 ip/debug/triggen_ila/triggen_ila.xci
 ip/debug/turfio_cin_ila/turfio_cin_ila.xci
