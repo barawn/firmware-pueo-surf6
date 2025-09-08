@@ -31,6 +31,9 @@ module lp_sim;
         if (clk_phase == 2'b10) clk_phase <= #0.01 2'b00;
         else clk_phase <= #0.01 clk_phase + 1;
     end
+
+    reg [11:0] pretty_insample = {12{1'b0}};    
+    reg [12:0] pretty_outsample = {13{1'b0}};    
     
     reg [7:0][11:0] adc_indata = {96{1'b0}};
     wire [47:0] tmp_out;
@@ -39,6 +42,28 @@ module lp_sim;
     wire [7:0][12:0] filt0_out;
 
     wire [3:0][12:0] filt1_out;
+
+    reg [7:0][11:0] adc_indata_hold = {96{1'b0}};
+    reg [7:0][12:0] filt1_out_hold = {4*13{1'b0}};
+    always @(posedge clk) begin
+        adc_indata_hold <= #0.001 adc_indata;
+        filt1_out_hold <= #0.001 filt1_out;
+    end        
+
+    always @(posedge clk) begin
+        #0.002 pretty_insample <= adc_indata_hold[0];
+        #0.666 pretty_insample <= adc_indata_hold[2];
+        #0.666 pretty_insample <= adc_indata_hold[4];
+        #0.666 pretty_insample <= adc_indata_hold[6];
+    end
+
+    always @(posedge clk) begin
+        #0.002 pretty_outsample <= filt1_out_hold[0];
+        #0.666 pretty_outsample <= filt1_out_hold[1];
+        #0.666 pretty_outsample <= filt1_out_hold[2];
+        #0.666 pretty_outsample <= filt1_out_hold[3];
+    end
+
 
     wire [7:0][11:0] mf_out;
 //    wire [7:0][15:0] systA_out;
@@ -326,9 +351,9 @@ module lp_sim;
 //                                  .out1_o( systC_out[6] ));
 
     matched_filter_v2 #(.INBITS(12))
-                               mf(.clk_i(clk),
-                                  .dat_i(adc_indata),
-                                  .dat_o(mf_out));
+                               mf(.aclk(clk),
+                                  .data_i(adc_indata),
+                                  .data_o(mf_out));
                                                
     shannon_whitaker_lpfull_v3 #(.INBITS(12))
                                uut(.clk_i(clk),
@@ -415,7 +440,54 @@ module lp_sim;
              adc_indata[3] = 16'd1000;
         @(posedge clk);
         #0.1 adc_indata[2] = 16'd0;
-             adc_indata[3] = 16'd0;             
+             adc_indata[3] = 16'd0;   
+        #100;
+        // 100 MHz sine wave for the 2/3rds filter
+        @(posedge clk);
+        #0.1 adc_indata[0] = 16'd0;
+             adc_indata[2] = 16'd407;
+             adc_indata[4] = 16'd743;
+             adc_indata[6] = 16'd951;
+        @(posedge clk);
+        #0.1 adc_indata[0] = 16'd994;
+             adc_indata[2] = 16'd866;
+             adc_indata[4] = 16'd588;
+             adc_indata[6] = 16'd208;
+        @(posedge clk);
+        #0.1 adc_indata[0] = -16'd208;
+             adc_indata[2] = -16'd588;
+             adc_indata[4] = -16'd866;
+             adc_indata[6] = -16'd994;
+        @(posedge clk);
+        #0.1 adc_indata[0] = -16'd951;
+             adc_indata[2] = -16'd743;
+             adc_indata[4] = -16'd407;
+             adc_indata[6] = 16'd0;
+        @(posedge clk);
+        #0.1 adc_indata[0] = 16'd407;
+             adc_indata[2] = 16'd743;
+             adc_indata[4] = 16'd951;
+             adc_indata[6] = 16'd994;
+        @(posedge clk);
+        #0.1 adc_indata[0] = 16'd866;
+             adc_indata[2] = 16'd588;
+             adc_indata[4] = 16'd208;
+             adc_indata[6] = -16'd208;
+        @(posedge clk);
+        #0.1 adc_indata[0] = -16'd588;
+             adc_indata[2] = -16'd866;
+             adc_indata[4] = -16'd994;
+             adc_indata[6] = -16'd951;
+        @(posedge clk);
+        #0.1 adc_indata[0] = -16'd743;
+             adc_indata[2] = -16'd407;
+             adc_indata[4] = 16'd0;
+             adc_indata[6] = 16'd0;
+        @(posedge clk);
+        #0.1 adc_indata[0] = 16'd0;
+             adc_indata[2] = 16'd0;
+             adc_indata[4] = 16'd0;
+             adc_indata[6] = 16'd0;             
     end
 
 endmodule
