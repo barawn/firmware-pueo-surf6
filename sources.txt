@@ -33,8 +33,10 @@ hdl/pueo-surf-trigger/hdl_v2/L1_trigger_wrapper_v2.sv
 hdl/pueo-surf-trigger/hdl/agc_core.sv
 hdl/pueo-surf-trigger/hdl/agc_dsp.sv
 hdl/pueo-surf-trigger/hdl/agc_wrapper.sv
+hdl/pueo-surf-trigger/hdl_v3/beam_meta_builder.sv
 hdl/pueo-surf-trigger/hdl_v2/beamform_trigger_v2.sv
 hdl/pueo-surf-trigger/hdl_v2/beamform_trigger_v2b.sv
+hdl/pueo-surf-trigger/hdl_v3/beamform_trigger_v3.sv
 hdl/pueo-surf-trigger/hdl_v2/beamscaler.sv
 hdl/pueo-surf-trigger/hdl_v2/beamscaler_wb_wrap.sv
 hdl/pueo-surf-trigger/hdl_v2/beamscaler_wrap.sv
@@ -124,4 +126,3 @@ verilog-library-barawn/hdl/filters/lp_six_to_four.sv
 verilog-library-barawn/hdl/filters/twothirds_lpfull.sv
 verilog-library-barawn/hdl/filters/fivetap_systolic_preadd.sv
 hdl/pueo-surf-trigger/hdl_v3/beam_meta_nybble.sv
-hdl/pueo-surf-trigger/hdl_v3/beamform_trigger_v3.sv

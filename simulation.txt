@@ -1,11 +1,11 @@
 verilog-library-barawn/sim/tb_rclock.sv
+sim/L1_trigger_v2_tb.sv
+hdl/pueo-surf-trigger/sim/wb_threshold_tb.sv
 sim/L1_intercon_tb.sv
 sim/lp_sim.sv
-sim/L1_trigger_v2_tb.sv
 sim/clock_tb.sv
 sim/pueo_wrapper_tb.sv
 hdl/pueo-surf-trigger/sim/beamscaler_tb.sv
-hdl/pueo-surf-trigger/sim/wb_threshold_tb.sv
 hdl/pueo-surf-trigger/sim/dual_pueo_envelope_v2_tb.sv
 hdl/pueo-surf-trigger/sim/L1_trigger_loop_tb.sv
 sim/pueo_readout_tb.v
