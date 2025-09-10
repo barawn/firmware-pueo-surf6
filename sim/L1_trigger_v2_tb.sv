@@ -32,14 +32,19 @@ module L1_trigger_v2_tb;
     reg [7:0][7:0][4:0] dat_in = {8*8{5'd16}};
     
     `DEFINE_WB_IF( wb_ , 13, 32 );
-    assign wb_cyc_o = 1'b0;
-    assign wb_stb_o = 1'b0;
-    assign wb_we_o = 1'b0;
-    assign wb_sel_o = 4'h0;
-    assign wb_dat_o = {32{1'b0}};
-    assign wb_adr_o = {13{1'b0}};
+    reg cyc = 0;
+    reg we = 0;
+    reg [12:0] adr = {13{1'b0}};
+    reg [31:0] dat = {32{1'b0}};
     
-    L1_trigger_v2 #(.NBEAMS(2)) 
+    assign wb_cyc_o = cyc;
+    assign wb_stb_o = cyc;
+    assign wb_we_o = we;
+    assign wb_sel_o = {4{we}};
+    assign wb_dat_o = dat;
+    assign wb_adr_o = adr;
+    
+    L1_trigger_v2 #(.NBEAMS(2),.USE_V3("FALSE")) 
         uut(.wb_clk_i(wb_clk),
             .wb_rst_i(wb_rst),
             `CONNECT_WBS_IFM( wb_ , wb_ ),
@@ -53,9 +58,59 @@ module L1_trigger_v2_tb;
             .ifclk(ifclk),
             .trigger_o(trigger),
             .trigger_count_done_o(trigger_count_done));
-            
+
+    task wb_write;
+        input [15:0] addr;
+        input [31:0] data;
+        begin
+            @(posedge wb_clk);
+            #0.1 cyc = 1;
+                 we = 1;
+                 adr = addr;
+                 dat = data;
+            while (!wb_ack_i) @(posedge wb_clk);
+            #0.1 cyc = 0;
+                 we = 0;
+                 adr = {12{1'b0}};
+                 dat = {32{1'b0}};
+            @(posedge wb_clk);                
+        end
+    endtask
+    
+    reg [31:0] wb_rd_data = {32{1'b0}};
+    always @(posedge wb_clk) begin
+        if (wb_cyc_o && wb_stb_o && wb_ack_i)
+            wb_rd_data <= wb_dat_i;
+    end
+    
+    task wb_read;
+        input [15:0] addr;
+        begin
+            @(posedge wb_clk);
+            #0.1 cyc = 1;
+                 adr = addr;
+            while (!wb_ack_i) @(posedge wb_clk);
+            #0.1 cyc = 0;
+                 adr = {12{1'b0}};
+                 $display("time %0t read 0x%0h", $time, wb_rd_data);
+            @(posedge wb_clk);                                  
+        end
+    endtask
+                
     initial begin
         #250;
+        
+        wb_write(16'h0800, 32'd5000);
+        wb_write(16'h0804, 32'd4000);
+        wb_write(16'h0A00, 32'd5001);
+        wb_write(16'h0A04, 32'd300);
+
+        wb_write(16'h1800, 32'h2);
+        wb_write(16'h1808, 32'h200);
+        #1000;
+        wb_read(16'h1808);        
+        
+        #500;
         
         @(posedge aclk);
         // our inputs are offset binary so add 16 to everything
