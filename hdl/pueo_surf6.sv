@@ -1,5 +1,12 @@
 `timescale 1ns / 1ps
 `include "interfaces.vh"
+`include "pueo_beams_09_04_25.sv"
+`include "pueo_dummy_beams.sv"
+
+import pueo_beams::NUM_BEAM;
+import pueo_dummy_beams::NUM_DUMMY;
+
+`define NUM_V2_BEAMS 46
 
 // There are very few RevA/RevB differences for the PL:
 // SYSCLK moves from AG17/AH17 to AH15/AG15
@@ -16,7 +23,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd5,
-                    parameter [7:0] VER_REV = 8'd18,
+                    parameter [7:0] VER_REV = 8'd20,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -109,6 +116,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
         input [7:0] ADC_IN_N        
     );
     
+    // Build triggers off of the versioning.
+    localparam USE_V3 = (VER_MINOR == 4'd5) ? "FALSE" : "TRUE";
+    localparam FULL_BEAMS = (USE_V3 == "TRUE") ? NUM_BEAM : `NUM_V2_BEAMS;
+    
+    localparam NBEAMS = VER_REV[0] ? NUM_DUMMY : FULL_BEAMS;
     localparam USE_BIQUADS = "FALSE";
     
     `ifdef USE_INTERPHI
@@ -457,12 +469,12 @@ module pueo_surf6 #(parameter IDENT="SURF",
                 .adc_dout(adc_dout));
 
     // The V2 levelone has the generator embedded inside it.
-    localparam NBEAMS = 46;
     wire run_reset;
     wire run_stop;
     `DEFINE_AXI4S_MIN_IF( trigger_ , 32 );
 
     L1_trigger_wrapper_v2 #(.NBEAMS(NBEAMS),
+                            .USE_V3(USE_V3),
                             .AGC_TIMESCALE_REDUCTION_BITS(1),
                             .USE_BIQUADS(USE_BIQUADS),
                             .WBCLKTYPE(WB_CLK_TYPE),
