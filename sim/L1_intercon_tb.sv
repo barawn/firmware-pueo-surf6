@@ -74,7 +74,7 @@ module L1_intercon_tb;
                             .clock_enabled_i(clock_en),
                             `CONNECT_WBS_IFM( wb_ , wb_ ),
                             `CONNECT_WBM_IFM( thresh_ , thresh_ ),
-                            `CONNECT_WBM_IFM( generator_ , generator_ ),
+                            `CONNECT_WBM_IFM( control_ , generator_ ),
                             `CONNECT_WBM_IFM( agc_ , agc_ ),
                             `CONNECT_WBM_IFM( bq_ , bq_ ));
 
@@ -100,13 +100,13 @@ module L1_intercon_tb;
         #1 cyc = 0; we = 0;
         
         #100;
-        adr = 15'h2000;
+        adr = 15'h0000;
         @(posedge wb_clk); #1 cyc = 1;
         while (!wb_ack_i) @(posedge wb_clk);
         #1 cyc = 0;
 
         #100;
-        adr = 15'h2000;
+        adr = 15'h2008;
         @(posedge wb_clk); #1 cyc = 1;
                               we = 1;
                               dat = 32'h00C0FFEE;

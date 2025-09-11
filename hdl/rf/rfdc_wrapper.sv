@@ -223,6 +223,7 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
                         .m32_axis_tdata( adc_vec[7] ),
                         .m32_axis_tready(1'b1),
                         .m32_axis_tvalid(),
+                        .s00_axis_tvalid(1'b0),
                         .s00_axis_tdata({128{1'b0}}));                                                             
         end else begin : G3
             // gen3 only hooks up two of the clocks:
@@ -327,6 +328,7 @@ module rfdc_wrapper #(parameter DEVICE="GEN1",
                         .m32_axis_tdata( adc_vec[7] ),
                         .m32_axis_tready(1'b1),
                         .m32_axis_tvalid(),
+                        .s00_axis_tvalid(1'b0),
                         .s00_axis_tdata({128{1'b0}}));                                                             
         end
     endgenerate

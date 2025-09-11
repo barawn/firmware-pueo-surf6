@@ -52,7 +52,8 @@ module uram_sync_transfer #(
     (* CUSTOM_MC_SRC_TAG = "ABOT_XFER", CUSTOM_MC_MIN = "-1.5", CUSTOM_MC_MAX = "1.5" *)
     reg [NBIT*(NSAMP_A_BOT)-1:0] bufferA_bot = {NBIT*NSAMP_A_BOT{1'b0}};
     // btop -1, 11: min -0.6667 ns = -0.25, max 11=7.333=2.75
-    (* CUSTOM_MC_SRC_TAG = "BTOP_XFER", CUSTOM_MC_MIN = "-0.25", CUSTOM_MC_MAX = "2.75" *)
+//    (* CUSTOM_MC_SRC_TAG = "BTOP_XFER", CUSTOM_MC_MIN = "-0.25", CUSTOM_MC_MAX = "2.75" *)
+    (* CUSTOM_MC_SRC_TAG = "BTOP_XFER", CUSTOM_MC_MIN = "0", CUSTOM_MC_MAX = "2.75" *)
     reg [NBIT*(NSAMP_B_TOP)-1:0] bufferB_top = {NBIT*NSAMP_B_TOP{1'b0}};
     // bbot -4=-2.667 ns =-1, max 8 = 5.333 = 2
     (* CUSTOM_MC_SRC_TAG = "BBOT_XFER", CUSTOM_MC_MIN = "-1", CUSTOM_MC_MAX = "2" *)
