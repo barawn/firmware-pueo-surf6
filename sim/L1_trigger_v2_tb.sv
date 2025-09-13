@@ -26,7 +26,7 @@ module L1_trigger_v2_tb;
         else clk_phase <= #0.01 clk_phase + 1;
     end
     
-    wire [1:0] trigger;
+    wire [45:0] trigger;
     wire trigger_count_done;
     
     reg [7:0][7:0][4:0] dat_in = {8*8{5'd16}};
@@ -44,7 +44,7 @@ module L1_trigger_v2_tb;
     assign wb_dat_o = dat;
     assign wb_adr_o = adr;
     
-    L1_trigger_v2 #(.NBEAMS(2),.USE_V3("FALSE")) 
+    L1_trigger_v2 #(.NBEAMS(46),.USE_V3("FALSE")) 
         uut(.wb_clk_i(wb_clk),
             .wb_rst_i(wb_rst),
             `CONNECT_WBS_IFM( wb_ , wb_ ),
