@@ -44,7 +44,7 @@ module L1_trigger_v2_tb;
     assign wb_dat_o = dat;
     assign wb_adr_o = adr;
     
-    L1_trigger_v2 #(.NBEAMS(46),.USE_V3("FALSE")) 
+    L1_trigger_v2 #(.NBEAMS(48),.USE_V3("TRUE")) 
         uut(.wb_clk_i(wb_clk),
             .wb_rst_i(wb_rst),
             `CONNECT_WBS_IFM( wb_ , wb_ ),
