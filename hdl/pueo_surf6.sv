@@ -118,7 +118,10 @@ module pueo_surf6 #(parameter IDENT="SURF",
     
     // Build triggers off of the versioning.
     localparam USE_V3 = (VER_MINOR == 4'd5) ? "FALSE" : "TRUE";
-    localparam FULL_BEAMS = (USE_V3 == "TRUE") ? NUM_BEAM : `NUM_V2_BEAMS;
+    localparam USE_LF = (VER_MINOR != 4'd5 && VER_MINOR[0]) ? "TRUE" : "FALSE";
+    localparam FULL_BEAMS = (USE_LF == "TRUE") ? 48 : ((USE_V3 == "TRUE") ? NUM_BEAM : `NUM_V2_BEAMS);
+
+    localparam TRIGGER_TYPE = (USE_LF == "TRUE") ? "LF" : ((USE_V3 == "TRUE") ? "V3" : "V2");
     
     localparam NBEAMS = VER_REV[0] ? NUM_DUMMY : FULL_BEAMS;
     localparam USE_BIQUADS = "FALSE";
@@ -474,7 +477,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     `DEFINE_AXI4S_MIN_IF( trigger_ , 32 );
 
     L1_trigger_wrapper_v2 #(.NBEAMS(NBEAMS),
-                            .USE_V3(USE_V3),
+                            .TRIGGER_TYPE(TRIGGER_TYPE),
                             .AGC_TIMESCALE_REDUCTION_BITS(1),
                             .USE_BIQUADS(USE_BIQUADS),
                             .WBCLKTYPE(WB_CLK_TYPE),
