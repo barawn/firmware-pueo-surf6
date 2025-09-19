@@ -21,6 +21,7 @@ import pueo_dummy_beams::NUM_DUMMY;
 module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
                     parameter DEVICE="GEN3",
+                    parameter USE_LF = "FALSE",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd6,
                     parameter [7:0] VER_REV = 8'd6,
@@ -118,7 +119,6 @@ module pueo_surf6 #(parameter IDENT="SURF",
     
     // Build triggers off of the versioning.
     localparam USE_V3 = (VER_MINOR == 4'd5) ? "FALSE" : "TRUE";
-    localparam USE_LF = (VER_MINOR != 4'd5 && VER_MINOR[0]) ? "TRUE" : "FALSE";
     localparam FULL_BEAMS = (USE_LF == "TRUE") ? 48 : ((USE_V3 == "TRUE") ? NUM_BEAM : `NUM_V2_BEAMS);
 
     localparam TRIGGER_TYPE = (USE_LF == "TRUE") ? "LF" : ((USE_V3 == "TRUE") ? "V3" : "V2");
@@ -139,7 +139,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam INV_TXCLK = 1'b0;
 
     localparam [15:0] FIRMWARE_VERSION = { VER_MAJOR, VER_MINOR, VER_REV };
-    localparam [31:0] DATEVERSION = { (REVISION=="B" ? 1'b1 : 1'b0),FIRMWARE_DATE[14:0], FIRMWARE_VERSION };
+    localparam [31:0] DATEVERSION = { (USE_LF=="TRUE" ? 1'b0 : 1'b1),FIRMWARE_DATE[14:0], FIRMWARE_VERSION };
 
     localparam NUM_GPO = 8;
     
