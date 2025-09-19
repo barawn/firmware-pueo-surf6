@@ -16,15 +16,24 @@ source [file join $projdir postprocess_fwupdate_bram.tcl]
 set curdir [pwd]
 set ver [get_built_project_version]
 puts "ver $ver"
+set mie [ expr ($ver & 0x80000000)>>31 ]
+
 set verstring [pretty_version $ver]
 puts "verstring $verstring"
 set topname [get_property TOP [current_design]]
 set origbit [format "%s.bit" $topname]
 set origltx [format "%s.ltx" $topname]
 set origll [format "%s.ll" $topname]
-set fullbitname [format "%s_%s.bit" $topname $verstring]
-set fullltxname [format "%s_%s.ltx" $topname $verstring]
-set fullfwuname [format "%s_%s.fwu" $topname $verstring]
+
+if { $mie != 1 } {
+    set fullbitname [format "%s_%s_lf.bit" $topname $verstring]
+    set fullltxname [format "%s_%s_lf.ltx" $topname $verstring]
+    set fullfwuname [format "%s_%s_lf.fwu" $topname $verstring]
+} else {
+    set fullbitname [format "%s_%s.bit" $topname $verstring]
+    set fullltxname [format "%s_%s.ltx" $topname $verstring]
+    set fullfwuname [format "%s_%s.fwu" $topname $verstring]
+}
 
 set build_dir [file join $projdir build]
 
