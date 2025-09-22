@@ -11,7 +11,6 @@ import pueo_dummy_beams::NUM_DUMMY;
 // There are very few RevA/RevB differences for the PL:
 // SYSCLK moves from AG17/AH17 to AH15/AG15
 // PLCLK_P/N at 122/124 becomes OE_AUXCLK/OE_AUXMGT:
-// in RevA it's the LVCMOS SYSREF input, so again we can handle those
 // since the IOSTANDARDs/etc. stay the same.
 // 
 // But CLK8_P/N stays unused in revB (and L13_N/P were unused in revA)
@@ -24,7 +23,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter USE_LF = "FALSE",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd6,
-                    parameter [7:0] VER_REV = 8'd6,
+                    parameter [7:0] VER_REV = 8'd8,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
