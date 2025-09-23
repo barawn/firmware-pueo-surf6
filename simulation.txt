@@ -1,4 +1,5 @@
 verilog-library-barawn/sim/tb_rclock.sv
+hdl/pueo-surf-trigger/sim/lowampa_env_tb.sv
 sim/L1_trigger_v2_tb.sv
 hdl/pueo-surf-trigger/sim/wb_threshold_tb.sv
 sim/L1_intercon_tb.sv
