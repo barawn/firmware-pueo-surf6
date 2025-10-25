@@ -34,20 +34,30 @@ module lp_sim;
 
     reg [11:0] pretty_insample = {12{1'b0}};    
     reg [12:0] pretty_outsample = {13{1'b0}};    
+    reg [11:0] pretty_upsample = {12{1'b0}};
     
     reg [7:0][11:0] adc_indata = {96{1'b0}};
     wire [47:0] tmp_out;
+
+    wire [3:0][11:0] adc_indata1500 = { adc_indata[6],
+                                        adc_indata[4],
+                                        adc_indata[2],
+                                        adc_indata[0] };
 
     reg rst = 0;
     wire [7:0][12:0] filt0_out;
 
     wire [3:0][12:0] filt1_out;
 
+    wire [7:0][11:0] ups_data;
+
     reg [7:0][11:0] adc_indata_hold = {96{1'b0}};
     reg [7:0][12:0] filt1_out_hold = {4*13{1'b0}};
+    reg [7:0][11:0] ups_out_hold = {96{1'b0}};
     always @(posedge clk) begin
         adc_indata_hold <= #0.001 adc_indata;
         filt1_out_hold <= #0.001 filt1_out;
+        ups_out_hold <= #0.001 ups_data;
     end        
 
     always @(posedge clk) begin
@@ -64,8 +74,19 @@ module lp_sim;
         #0.666 pretty_outsample <= filt1_out_hold[3];
     end
 
+    always @(posedge clk) begin
+        #0.002 pretty_upsample <= ups_out_hold[0];
+        #0.333 pretty_upsample <= ups_out_hold[1];
+        #0.333 pretty_upsample <= ups_out_hold[2];
+        #0.333 pretty_upsample <= ups_out_hold[3];
+        #0.333 pretty_upsample <= ups_out_hold[4];
+        #0.333 pretty_upsample <= ups_out_hold[5];
+        #0.333 pretty_upsample <= ups_out_hold[6];
+        #0.333 pretty_upsample <= ups_out_hold[7];
+    end
 
     wire [7:0][11:0] mf_out;
+    wire [3:0][11:0] mf2_out;
 //    wire [7:0][15:0] systA_out;
 //    wire [7:0][15:0] systA1_out;
 //    wire [7:0][15:0] systB_out;
@@ -354,6 +375,11 @@ module lp_sim;
                                mf(.aclk(clk),
                                   .data_i(adc_indata),
                                   .data_o(mf_out));
+
+    matched_filter_v3_1500 #(.INBITS(12))
+                               mf2(.aclk(clk),
+                                   .data_i(adc_indata1500),
+                                   .data_o(mf2_out));
                                                
     shannon_whitaker_lpfull_v3 #(.INBITS(12))
                                uut(.clk_i(clk),
@@ -371,54 +397,61 @@ module lp_sim;
                            adc_indata[0] }),
                   .dat_o(filt1_out));
 
+    upsample_wrap ups(.clk_i(clk),
+                      .data_i({ adc_indata[6],
+                           adc_indata[4],
+                           adc_indata[2],
+                           adc_indata[0] }),
+                      .data_o(ups_data));
+
     initial begin
         #100;
         @(posedge clk);
-        #0.1 adc_indata[6] = 16'd1000;
+        #0.1 adc_indata[6] = 16'hFC00;
 //             adc_indata[4] = 16'd1000;
         @(posedge clk);
         #0.1 adc_indata[6] = 16'd0;
 //             adc_indata[4] = 16'd0;
         #100;
         @(posedge clk);
-        #0.1 adc_indata[0] = 16'd1000;
+        #0.1 adc_indata[0] = 16'hFC00;
 //             adc_indata[2] = 16'd1000;
         @(posedge clk);
         #0.1 adc_indata[0] = 16'd0;
 //             adc_indata[2] = 16'd0;
         #100;
         @(posedge clk);
-        #0.1 adc_indata[1] = 16'd1000;
+        #0.1 adc_indata[1] = 16'hFC00;
         @(posedge clk);
         #0.1 adc_indata[1] = 16'd0;
         
         #100;
         @(posedge clk);
-        #0.1 adc_indata[2] = 16'd1000;
+        #0.1 adc_indata[2] = 16'hFC00;
         @(posedge clk);
         #0.1 adc_indata[2] = 16'd0;
         
         #100;
         @(posedge clk);
-        #0.1 adc_indata[3] = 16'd1000;
+        #0.1 adc_indata[3] = 16'hFC00;
         @(posedge clk);
         #0.1 adc_indata[3] = 16'd0;
 
         #100;
         @(posedge clk);
-        #0.1 adc_indata[4] = 16'd1000;
+        #0.1 adc_indata[4] = 16'hFC00;
         @(posedge clk);
         #0.1 adc_indata[4] = 16'd0;
         
         #100;
         @(posedge clk);
-        #0.1 adc_indata[5] = 16'd1000;
+        #0.1 adc_indata[5] = 16'hFFFF;
         @(posedge clk);
         #0.1 adc_indata[5] = 16'd0;
         
         #100;
         @(posedge clk);
-        #0.1 adc_indata[7] = 16'd1000;
+        #0.1 adc_indata[7] = 16'hFFFF;
         @(posedge clk);
         #0.1 adc_indata[7] = 16'd0;
 
