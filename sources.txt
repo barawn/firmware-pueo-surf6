@@ -85,6 +85,7 @@ hdl/pueo-surf-trigger/hdl_v2/sample_store.sv
 hdl/pueo-surf-trigger/hdl/saturate_and_scale.sv
 verilog-library-barawn/hdl/filters/shannon_whitaker_lpfull_v2.sv
 verilog-library-barawn/hdl/filters/shannon_whitaker_lpfull_v3.sv
+verilog-library-barawn/hdl/filters/shannon_whitaker_lpfull_v4.sv
 hdl/pueo-surf-trigger/hdl_lf/shannon_whitaker_lpfull_vlowampa.sv
 verilog-library-barawn/hdl/math/signed_8b_square.sv
 hdl/clock/simple_clock_mon.sv
