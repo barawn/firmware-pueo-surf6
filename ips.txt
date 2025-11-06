@@ -11,7 +11,6 @@ ip/uram/event_hdr_fifo/event_hdr_fifo.xci
 ip/debug/event_ila/event_ila.xci
 ip/fifo/fw_fifo/fw_fifo.xci
 ip/debug/fwupd_ila/fwupd_ila.xci
-ip/fir/halfband/halfband.xci
 ip/clock/ifclk_pll/ifclk_pll.xci
 ip/debug/intercon_ila/intercon_ila.xci
 ip/interphi/interphi_aurora/interphi_aurora.xci
