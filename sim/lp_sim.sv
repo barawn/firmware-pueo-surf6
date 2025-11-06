@@ -381,7 +381,7 @@ module lp_sim;
                                    .data_i(adc_indata1500),
                                    .data_o(mf2_out));
                                                
-    shannon_whitaker_lpfull_v3 #(.INBITS(12))
+    shannon_whitaker_lpfull_v4 #(.INBITS(12))
                                uut(.clk_i(clk),
                                    .rst_i(rst),
                                    .dat_i(adc_indata),
