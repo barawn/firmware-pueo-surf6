@@ -14,8 +14,10 @@ module uram_sync_transfer #(
     );
 
     // indicates what phase of the memclk we're in    
+    (* MAX_FANOUT = 10 *)
     reg [1:0] write_phase = {2{1'b0}};
     // indicates what phase of the aclk we're in
+    (* MAX_FANOUT = 10 *)
     reg [2:0] buffer_phase = {3{1'b0}};
     
     // These are the aclk-side buffers.
