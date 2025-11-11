@@ -23,7 +23,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter USE_LF = "FALSE",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd6,
-                    parameter [7:0] VER_REV = 8'd28,
+                    parameter [7:0] VER_REV = 8'd30,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -123,7 +123,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam TRIGGER_TYPE = (USE_LF == "TRUE") ? "LF" : ((USE_V3 == "TRUE") ? "V31500" : "V2");
     
     localparam NBEAMS = VER_REV[0] ? NUM_DUMMY : FULL_BEAMS;
-    localparam USE_BIQUADS = (USE_LF == "TRUE") ? "FALSE" : "FALSE";
+    localparam USE_BIQUADS = (USE_LF == "TRUE") ? "FALSE" : "TRUE";
     
     `ifdef USE_INTERPHI
     localparam IBERT = "TRUE";
