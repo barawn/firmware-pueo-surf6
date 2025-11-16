@@ -1,4 +1,7 @@
 `timescale 1ns / 1ps
+
+`include "debug_enable.vh"
+
 `include "interfaces.vh"
 `include "pueo_beams_09_04_25.sv"
 `include "pueo_dummy_beams.sv"
@@ -211,12 +214,6 @@ module pueo_surf6 #(parameter IDENT="SURF",
         else sdo_counter <= sdo_counter + 1;
     end
 
-    // just abuse this, whatever    
-    lock_ila u_lock_ila(.clk(wb_clk),
-                        .probe0(cmd_rx),
-                        .probe1(cmd_tx_t),
-                        .probe2(lol_sticky),
-                        .probe3(sdo_counter));
         
     // bit 7: firmware loading complete
     wire [NUM_GPO-1:0] idctrl_gpi;
@@ -904,11 +901,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                               .GPIO_0_0_tri_t( emio_gpio_t ),
                               .pl_clk0_0(ps_clk));
 
-    
-    // still need these to monitor the UART path
-    uart_vio u_vio(.clk(ps_clk),.probe_in0(emio_sel),.probe_out0(emio_wake));
-    uart_ila u_ila(.clk(wb_clk),.probe0(bm_tx),.probe1(bm_rx));
-
+        
     // NOTE NOTE NOTE NOTE NOTE
     // THIS NEEDS TO BE CHANGED TO BE RUNNING OFF OF RACKCLK, NOT RXCLK
     // RXCLK DISAPPEARS WHEN THE MMCM RESETS, RACKCLK DOES NOT
@@ -1032,13 +1025,30 @@ module pueo_surf6 #(parameter IDENT="SURF",
         `endif
     endgenerate
     // savin' every bit of power we can folks
+    // decouple sync
+    reg sync_rereg = 1;
+    always @(posedge aclk) sync_rereg <= !sync;
     wire no_pulse_needed = idctrl_gpo[3] || !idctrl_gpo[4];
     wire pulse;
     (* CUSTOM_IGN_DST = "SYSREFCLK" *)
-    ODDRE1 #(.SRVAL(1'b1)) u_pulse(.C(aclk),.D1(!sync),.D2(1'b1),.SR(no_pulse_needed),
+    ODDRE1 #(.SRVAL(1'b1)) u_pulse(.C(aclk),.D1(sync_rereg),.D2(1'b1),.SR(no_pulse_needed),
                                    .Q(pulse));
     // purposefully inverted
     (* CUSTOM_IGN_DST = "SYSREFCLK" *)
     OBUFTDS u_pulse_obuf(.I(pulse),.T(no_pulse_needed),.O(PULSE_N),.OB(PULSE_P));
+
+
+    `ifdef USING_DEBUG
+    // just abuse this, whatever    
+    lock_ila u_lock_ila(.clk(wb_clk),
+                        .probe0(cmd_rx),
+                        .probe1(cmd_tx_t),
+                        .probe2(lol_sticky),
+                        .probe3(sdo_counter));
+    // still need these to monitor the UART path
+    uart_vio u_vio(.clk(ps_clk),.probe_in0(emio_sel),.probe_out0(emio_wake));
+    uart_ila u_ila(.clk(wb_clk),.probe0(bm_tx),.probe1(bm_rx));
+    `endif
+
     
 endmodule

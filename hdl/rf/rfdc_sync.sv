@@ -1,4 +1,6 @@
 `timescale 1ns / 1ps
+`include "debug_enable.vh"
+
 // Capture PL_SYSREF cleanly.
 // PL_SYSREF comes in completely aligned with SYSCLK so any delay
 // will work. Let's just try straight up and see what it says.
@@ -34,6 +36,8 @@ module rfdc_sync(
         end
         pl_sysref_sysclk <= pl_sysref;
     end
+
+    `ifdef USING_DEBUG
     generate
         if (DEBUG == "TRUE") begin : ILA
             rfdc_sync_ila u_ila(.clk(sysclk_i),
@@ -42,6 +46,8 @@ module rfdc_sync(
                                 .probe2( pl_sysref_sysclk ) );
         end
     endgenerate                
+    `endif
+    
     assign pl_sysref_o = pl_sysref_sysclk;
     assign sysref_phase_o = sysref_phase;
 endmodule

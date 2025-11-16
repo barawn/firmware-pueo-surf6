@@ -1,4 +1,6 @@
 `timescale 1ns / 1ps
+`include "debug_enable.vh"
+
 // This is the rxclk-side state machine for the v1 rackctl.
 // For testing you can also just set mode to 0,
 // and loop (txn_valid_flag_o && txn_addr_o[23]) to txn_done_flag_i and
@@ -274,6 +276,7 @@ module rackctl_rxctl_sm_v1 #(parameter INV=1'b0,
     // drive_rackctl_mon
     // state
     // data_counter
+    `ifdef USING_DEBUG
     generate
         if (DEBUG == "TRUE") begin : ILA
             rackctl_ila u_ila(.clk(rxclk_i),
@@ -284,6 +287,7 @@ module rackctl_rxctl_sm_v1 #(parameter INV=1'b0,
                               .probe4(data_counter));
         end
     endgenerate
+    `endif
     assign txn_addr_o = txn_capture;
     assign txn_data_o = data_capture;
     assign txn_valid_flag_o = (state == MODE0_ISSUE_TXN);
