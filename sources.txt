@@ -145,3 +145,6 @@ hdl/interphi/interphi_ibert_wrapper.sv
 verilog-library-barawn/hdl/math/seven_bit_square.sv
 hb.coe
 hdl/pueo-surf-trigger/hdl_lf/beamform_lowampa.sv
+verilog-library-barawn/hdl/filters/biquad8_single_zero_fir_v2.sv
+verilog-library-barawn/hdl/filters/biquad8_pole_iir_v2.sv
+verilog-library-barawn/hdl/distram14_delay.sv

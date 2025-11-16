@@ -17,3 +17,5 @@ verilog-library-barawn/sim/shannon_whitaker_lpfull_tb.sv
 verilog-library-barawn/sim/tb_rclock.sv
 hdl/pueo-surf-trigger/sim/wb_threshold_tb.sv
 verilog-library-barawn/sim/biquad_working_tb.sv
+sim/biquad_working_tb_behav.wcfg
+sim/distram14_delay_tb.sv
