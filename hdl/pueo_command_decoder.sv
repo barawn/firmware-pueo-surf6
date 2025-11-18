@@ -17,6 +17,11 @@ module pueo_command_decoder(
         // this lets software know that a NOOP_LIVE was seen.
         output       runnoop_live_wbclk_o,
         
+        // Notch status commands.
+        output [5:0] notch0_byp_o,
+        output [5:0] notch1_byp_o,
+        output       notch_update_o,
+        
         // Run commands. All of these are multicycle!
         output       rundo_sync_o,
         output       runrst_o,
@@ -44,6 +49,15 @@ module pueo_command_decoder(
     );
 
     parameter DEBUG = "TRUE";
+
+    // Every SURF gets the full message. The notch gets programmed which
+    // bits it responds to (e.g. a mask).
+    reg [5:0] notch0_byp = {6{1'b1}};
+    reg [5:0] notch0_byp_rereg = {6{1'b1}};
+    reg [5:0] notch1_byp = {6{1'b1}};
+    reg [5:0] notch1_byp_rereg = {6{1'b1}};
+    reg notch_update = 0;
+    reg notch_update_rereg = 0;
 
     // We simplified the heck out of this.
     assign trig_valid_o = command_i[15] && command_valid_i;
@@ -75,7 +89,10 @@ module pueo_command_decoder(
     localparam [7:0] MODE1SPECIAL_RESET = 8'h01;
     localparam [7:0] MODE1SPECIAL_FW_MARK_A = 8'h02;
     localparam [7:0] MODE1SPECIAL_FW_MARK_B = 8'h03;
-
+    localparam [7:0] MODE1SPECIAL_NOTCH_UPDATE = 8'h04;
+    
+    wire mode1special_notch = (mode1data[7]);
+    wire notch_select = (mode1data[6]);
     reg mode1_rst = 0;
     (* CUSTOM_MC_SRC_TAG = "FW_DATA", CUSTOM_MC_MIN = "-1.0", CUSTOM_MC_MAX = "2.0" *)
     reg [7:0] mode1_tdata = {8{1'b0}};
@@ -138,6 +155,17 @@ module pueo_command_decoder(
         else if (message_valid_rereg[1]) do_runstop <= 0;
         
         sync_flag <= (message_valid && runcmd == RUNCMD_DO_SYNC);
+    
+        if (message_valid && (mode1type == MODE1TYPE_SPECIAL) && mode1special_notch) begin
+            if (notch_select) notch0_byp <= mode1data[5:0];
+            if (!notch_select) notch1_byp <= mode1data[5:0];
+        end
+        
+        notch0_byp_rereg <= notch0_byp;
+        notch1_byp_rereg <= notch1_byp;
+        
+        notch_update <= (mode1type == MODE1TYPE_SPECIAL) && (mode1data == MODE1SPECIAL_NOTCH_UPDATE) && message_valid;
+        notch_update_rereg <= notch_update;
         
         mode1_rst <= (mode1type == MODE1TYPE_SPECIAL) && (mode1data == MODE1SPECIAL_RESET) && message_valid;
         // stretch firmware_valid. mode1_tdata is naturally stretched.
@@ -161,4 +189,9 @@ module pueo_command_decoder(
     assign rundo_sync_o = do_rundo_sync;
     assign runrst_o = do_runrst;
     assign runstop_o = do_runstop;
+
+    assign notch_update_o = notch_update_rereg;
+    assign notch0_byp_o = notch0_byp_rereg;
+    assign notch1_byp_o = notch1_byp_rereg;
+
 endmodule
