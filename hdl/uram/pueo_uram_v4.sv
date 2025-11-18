@@ -303,6 +303,7 @@ module pueo_uram_v4 #(
 //            localparam FIRST_CASCADE_ORDER_B = (i == 0) ? "FIRST" : "MIDDLE";
 //            localparam LAST_CASCADE_ORDER_B = (i == NCHAN-1) ? "LAST" : "MIDDLE";
 
+            // apparently this needs to be false??
             localparam REG_CAS_B_START = "TRUE";
             localparam REG_CAS_B_MID0 = "TRUE";
             localparam REG_CAS_B_MID1 = "TRUE";
@@ -335,8 +336,9 @@ module pueo_uram_v4 #(
                                .BWE_A( {9{1'b1}} ),
                                .INJECT_SBITERR_A(1'b0),
                                .INJECT_DBITERR_A(1'b0),
-                               .OREG_CE_A(1'b0),
-                               .OREG_ECC_CE_A(1'b0),
+                               // apparently we're supposed to tie these high
+                               .OREG_CE_A(1'b1),
+                               .OREG_ECC_CE_A(1'b1),
                                .RST_A(1'b0),
                                .SLEEP(sleeping),
                                .CLK( memclk ),
@@ -345,12 +347,21 @@ module pueo_uram_v4 #(
                                .ADDR_B( this_read_addr ),
                                .EN_B( read_active ),
                                .RDB_WR_B( 1'b0 ),
-                               .BWE_B( {9{1'b0}} ),
+                               .BWE_B( 9'h100 ),
                                .INJECT_SBITERR_B(1'b0),
                                .INJECT_DBITERR_B(1'b0),
                                .OREG_CE_B(1'b1),
-                               .OREG_ECC_CE_B(1'b0),
+                               .OREG_ECC_CE_B(1'b1),
                                .RST_B(1'b0),
+                               .CAS_IN_ADDR_B({23{1'b0}}),
+                               .CAS_IN_BWE_B({9{1'b0}}),
+                               .CAS_IN_DBITERR_B(1'b0),
+                               .CAS_IN_DIN_B({72{1'b0}}),
+                               .CAS_IN_DOUT_B({72{1'b0}}),
+                               .CAS_IN_EN_B(1'b0),
+                               .CAS_IN_RDACCESS_B(1'b0),
+                               .CAS_IN_RDB_WR_B(1'b0),
+                               .CAS_IN_SBITERR_B(1'b0),
                                `CONNECT_URAM_ACASCIN_VEC( int_ , [0] ),
                                `CONNECT_URAM_ACASCOUT_VEC( int_ , [0] ),
                                `CONNECT_URAM_BCASCOUT_VEC( int_ , [0] ));
@@ -370,6 +381,11 @@ module pueo_uram_v4 #(
                        .SELF_MASK_B(11'h7FC))
                        u_uramb(.SLEEP(sleeping),
                                .CLK( memclk ),
+                               // apparently we should tie these high
+                               .EN_A(1'b1),
+                               .EN_B(1'b1),
+                               .RDB_WR_A(1'b1),
+                               .RDB_WR_B(1'b1),                               
                                `CONNECT_URAM_ACASCIN_VEC( int_ , [1] ),
                                `CONNECT_URAM_ACASCOUT_VEC( int_ , [1] ),
                                `CONNECT_URAM_BCASCIN_VEC( int_ , [1] ),
@@ -390,6 +406,11 @@ module pueo_uram_v4 #(
                        .SELF_MASK_B(11'h7FC))
                        u_uramc(.SLEEP(sleeping),
                                .CLK( memclk ),
+                               // apparently we should tie these high
+                               .EN_A(1'b1),
+                               .EN_B(1'b1),
+                               .RDB_WR_A(1'b1),
+                               .RDB_WR_B(1'b1),                               
                                `CONNECT_URAM_ACASCIN_VEC( int_ , [2] ),
                                `CONNECT_URAM_ACASCOUT_VEC( int_ , [2] ),
                                `CONNECT_URAM_BCASCIN_VEC( int_ , [2] ),
@@ -413,6 +434,11 @@ module pueo_uram_v4 #(
                        .SELF_MASK_B(11'h7FC))
                        u_uramd(.SLEEP(sleeping),
                                .CLK( memclk ),
+                               // apparently we should tie these high
+                               .EN_A(1'b1),
+                               .EN_B(1'b1),
+                               .RDB_WR_A(1'b1),
+                               .RDB_WR_B(1'b1),                               
                                .DOUT_B( uram_data_out[i] ),
                                .RDACCESS_B( uram_rdaccess[i] ),
                                `CONNECT_URAM_ACASCIN_VEC( int_ , [3] ),
