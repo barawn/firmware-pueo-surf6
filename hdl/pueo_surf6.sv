@@ -472,6 +472,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire run_stop;
     `DEFINE_AXI4S_MIN_IF( trigger_ , 32 );
 
+    // TURF notch remote control
+    wire notch_update;
+    wire [5:0] notch0_byp;
+    wire [5:0] notch1_byp;
+
     L1_trigger_wrapper_v2 #(.NBEAMS(NBEAMS),
                             .TRIGGER_TYPE(TRIGGER_TYPE),
                             .AGC_TIMESCALE_REDUCTION_BITS(1),
@@ -490,6 +495,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
                   .ifclk_running_i(clocks_ready),
                   .runrst_i(run_reset),
                   .runstop_i(run_stop),
+                  .notch_update_i(notch_update),
+                  .notch0_byp_i(notch0_byp),
+                  .notch1_byp_i(notch1_byp),
                   `CONNECT_AXI4S_MIN_IF(m_trig_ , trigger_ ));                  
                                               
 //    wire [NBEAMS-1:0] levelone_trigger;
@@ -603,6 +611,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     wire        pps;
 
     wire [1:0]  fw_mark;
+
     // this is the real real real command decoder now!
     pueo_command_decoder u_command_decoder(.sysclk_i(aclk),
                                            .command_i(turf_command),
@@ -615,6 +624,11 @@ module pueo_surf6 #(parameter IDENT="SURF",
                                            .rundo_sync_o(run_dosync),
                                            .runrst_o(run_reset),
                                            .runstop_o(run_stop),
+
+                                           .notch_update_o(notch_update),
+                                           .notch0_byp_o(notch0_byp),
+                                           .notch1_byp_o(notch1_byp),
+                        
                                            
                                            .pps_o(pps),
 
