@@ -45,6 +45,7 @@ module surf_id_ctrl(
     
     parameter [31:0] DEVICE = "SURF";
     parameter [31:0] VERSION = {32{1'b0}};
+    parameter [31:0] TRIGGER_CONFIG = {32{1'b0}};
     parameter WB_CLK_TYPE = "PSCLK";
     parameter NUM_GPO = 8;
     parameter NUM_GPI = 8;
@@ -147,7 +148,9 @@ module surf_id_ctrl(
     `WISHBONE_ADDRESS( 12'h014, sysref_phase, OUTPUT, [31:0], 0);
     // reg 6
     `WISHBONE_ADDRESS( 12'h018, adc_cal_ports, OUTPUTSELECT, sel_adc_cal_ports, 0);
-    assign wishbone_registers[7] = wishbone_registers[3];
+    // reg 7
+    `WISHBONE_ADDRESS( 12'h01C, TRIGGER_CONFIG, OUTPUT, [31:0], 0);
+//    assign wishbone_registers[7] = wishbone_registers[3];
     assign wishbone_registers[8] = wishbone_registers[0];
     assign wishbone_registers[9] = wishbone_registers[1];
     assign wishbone_registers[10] = wishbone_registers[2];
