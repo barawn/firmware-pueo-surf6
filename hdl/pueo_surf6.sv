@@ -23,10 +23,10 @@ import pueo_dummy_beams::NUM_DUMMY;
 module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
                     parameter DEVICE="GEN3",
-                    parameter USE_LF = "FALSE",
+                    parameter USE_LF = "TRUE",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd6,
-                    parameter [7:0] VER_REV = 8'd33,
+                    parameter [7:0] VER_REV = 8'd34,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -123,11 +123,24 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam USE_V3 = (VER_MINOR == 4'd5) ? "FALSE" : "TRUE";
     localparam FULL_BEAMS = (USE_LF == "TRUE") ? 48 : ((USE_V3 == "TRUE") ? NUM_BEAM : `NUM_V2_BEAMS);
 
-    localparam TRIGGER_TYPE = (USE_LF == "TRUE") ? "LF" : ((USE_V3 == "TRUE") ? "V31500" : "V2");
+    localparam LF_TRIGGER_TYPE = "LFV";
+
+    localparam TRIGGER_TYPE = (USE_LF == "TRUE") ? LF_TRIGGER_TYPE : ((USE_V3 == "TRUE") ? "V31500" : "V2");
     
     localparam NBEAMS = VER_REV[0] ? NUM_DUMMY : FULL_BEAMS;
     localparam USE_BIQUADS = (USE_LF == "TRUE") ? "FALSE" : "TRUE";
     
+    // ok, this is getting ridiculous, so just shift to another register.
+    localparam [31:0] MIE_TRIGGER_VERSION = 3;
+    // set bit 8 if biquads exist
+    localparam [31:0] MIE_TRIGGER_CONFIG = MIE_TRIGGER_VERSION + ((USE_BIQUADS == "TRUE") ? 32'h100 : 32'h0);
+    // set bit 24 if it's LF
+    localparam [31:0] LF_TRIGGER_VERSION = 3 + 32'h1000000;
+    // set bit 16 if it's LF vpol
+    localparam [31:0] LF_TRIGGER_CONFIG = LF_TRIGGER_VERSION + ((LF_TRIGGER_TYPE == "LFV") ? 32'h10000 : 32'h0);
+    
+    localparam [31:0] TRIGGER_CONFIG = (USE_LF == "TRUE") ? LF_TRIGGER_CONFIG : MIE_TRIGGER_CONFIG;
+        
     `ifdef USE_INTERPHI
     localparam IBERT = "TRUE";
     `else
@@ -731,6 +744,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                  .DOUT_N(DOUT_N));
         
     surf_id_ctrl #(.VERSION(DATEVERSION),
+                   .TRIGGER_CONFIG(TRIGGER_CONFIG),
                    .WB_CLK_TYPE(WB_CLK_TYPE),
                    .NUM_GPO(NUM_GPO),
                    .SYNC_OFFSET_DEFAULT(SYNC_OFFSET_DEFAULT))
