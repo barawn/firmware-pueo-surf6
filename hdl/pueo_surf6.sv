@@ -23,7 +23,7 @@ import pueo_dummy_beams::NUM_DUMMY;
 module pueo_surf6 #(parameter IDENT="SURF",
                     parameter REVISION="B",
                     parameter DEVICE="GEN3",
-                    parameter USE_LF = "TRUE",
+                    parameter USE_LF = "FALSE",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd6,
                     parameter [7:0] VER_REV = 8'd34,

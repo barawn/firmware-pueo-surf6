@@ -11,19 +11,19 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="2,569.882 ns"></ZoomStartTime>
-      <ZoomEndTime time="2,602.163 ns"></ZoomEndTime>
-      <Cursor1Time time="2,583.782 ns"></Cursor1Time>
+      <ZoomStartTime time="2,469.682 ns"></ZoomStartTime>
+      <ZoomEndTime time="2,795.483 ns"></ZoomEndTime>
+      <Cursor1Time time="2,611.282 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="179"></NameColumnWidth>
+      <NameColumnWidth column_width="164"></NameColumnWidth>
       <ValueColumnWidth column_width="72"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="76" />
+   <WVObjectSize size="85" />
    <wave_markers>
-      <marker time="2545030" label="" />
       <marker time="2490030" label="" />
-      <marker time="3105030" label="" />
+      <marker time="2545030" label="" />
+      <marker time="2975040" label="" />
    </wave_markers>
    <wvobject fp_name="/biquad_working_tb/wb_clk" type="logic">
       <obj_property name="ElementShortName">wb_clk</obj_property>
@@ -101,6 +101,30 @@
       <obj_property name="ElementShortName">filt1_out_hold[3:0][15:0]</obj_property>
       <obj_property name="ObjectShortName">filt1_out_hold[3:0][15:0]</obj_property>
    </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/in_bypass" type="logic">
+      <obj_property name="ElementShortName">in_bypass</obj_property>
+      <obj_property name="ObjectShortName">in_bypass</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/in_bypass" type="logic">
+      <obj_property name="ElementShortName">in_bypass</obj_property>
+      <obj_property name="ObjectShortName">in_bypass</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/bypass_mask_clk" type="array">
+      <obj_property name="ElementShortName">bypass_mask_clk[5:0]</obj_property>
+      <obj_property name="ObjectShortName">bypass_mask_clk[5:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/bypass_match" type="logic">
+      <obj_property name="ElementShortName">bypass_match</obj_property>
+      <obj_property name="ObjectShortName">bypass_match</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/notch_update_i" type="logic">
+      <obj_property name="ElementShortName">notch_update_i</obj_property>
+      <obj_property name="ObjectShortName">notch_update_i</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/bypass" type="array">
+      <obj_property name="ElementShortName">bypass[5:0]</obj_property>
+      <obj_property name="ObjectShortName">bypass[5:0]</obj_property>
+   </wvobject>
    <wvobject fp_name="/biquad_working_tb/pretty_outsample" type="array">
       <obj_property name="ElementShortName">pretty_outsample[15:0]</obj_property>
       <obj_property name="ObjectShortName">pretty_outsample[15:0]</obj_property>
@@ -116,6 +140,11 @@
       <obj_property name="AnalogInterpolation">ANALOG_INTERPOLATION_HOLD</obj_property>
       <obj_property name="AnalogOffscale">ANALOG_OFFSCALE_HIDE</obj_property>
       <obj_property name="AnalogHorizLine">0.000000</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/rf_in" type="array">
+      <obj_property name="ElementShortName">rf_in[3:0][11:0]</obj_property>
+      <obj_property name="ObjectShortName">rf_in[3:0][11:0]</obj_property>
+      <obj_property name="isExpanded"></obj_property>
    </wvobject>
    <wvobject fp_name="/biquad_working_tb/NSAMP" type="array">
       <obj_property name="ElementShortName">NSAMP[31:0]</obj_property>
@@ -208,11 +237,6 @@
    <wvobject fp_name="/biquad_working_tb/uut/zero_fir_out" type="array">
       <obj_property name="ElementShortName">zero_fir_out[63:0]</obj_property>
       <obj_property name="ObjectShortName">zero_fir_out[63:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/biquad_working_tb/rf_in" type="array">
-      <obj_property name="ElementShortName">rf_in[3:0][11:0]</obj_property>
-      <obj_property name="ObjectShortName">rf_in[3:0][11:0]</obj_property>
-      <obj_property name="isExpanded"></obj_property>
    </wvobject>
    <wvobject fp_name="vbus164" type="vbus">
       <obj_property name="label">fir3</obj_property>
@@ -526,92 +550,6 @@
       <obj_property name="ElementShortName">rf_out[3:0][15:0]</obj_property>
       <obj_property name="ObjectShortName">rf_out[3:0][15:0]</obj_property>
       <obj_property name="isExpanded"></obj_property>
-      <wvobject fp_name="/biquad_working_tb/rf_out[3]" type="array">
-         <obj_property name="ElementShortName">[3][15:0]</obj_property>
-         <obj_property name="ObjectShortName">[3][15:0]</obj_property>
-         <obj_property name="Radix">REALRADIX</obj_property>
-         <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
-         <obj_property name="radix_fractionWidth">2</obj_property>
-         <obj_property name="radix_otherWidth">0</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/rf_out[2]" type="array">
-         <obj_property name="ElementShortName">[2][15:0]</obj_property>
-         <obj_property name="ObjectShortName">[2][15:0]</obj_property>
-         <obj_property name="Radix">REALRADIX</obj_property>
-         <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
-         <obj_property name="radix_fractionWidth">2</obj_property>
-         <obj_property name="radix_otherWidth">0</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/rf_out[1]" type="array">
-         <obj_property name="ElementShortName">[1][15:0]</obj_property>
-         <obj_property name="ObjectShortName">[1][15:0]</obj_property>
-         <obj_property name="Radix">REALRADIX</obj_property>
-         <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
-         <obj_property name="radix_fractionWidth">2</obj_property>
-         <obj_property name="radix_otherWidth">0</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/rf_out[0]" type="array">
-         <obj_property name="ElementShortName">[0][15:0]</obj_property>
-         <obj_property name="ObjectShortName">[0][15:0]</obj_property>
-         <obj_property name="Radix">REALRADIX</obj_property>
-         <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
-         <obj_property name="radix_fractionWidth">2</obj_property>
-         <obj_property name="radix_otherWidth">0</obj_property>
-      </wvobject>
-   </wvobject>
-   <wvobject fp_name="group198" type="group">
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].internal_pcascade " type="array">
-         <obj_property name="ElementShortName">\LP[0].internal_pcascade [47:0]</obj_property>
-         <obj_property name="ObjectShortName">\LP[0].internal_pcascade [47:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].fir_out " type="array">
-         <obj_property name="ElementShortName">\LP[0].fir_out [47:0]</obj_property>
-         <obj_property name="ObjectShortName">\LP[0].fir_out [47:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /PCOUT" type="array">
-         <obj_property name="ElementShortName">PCOUT[47:0]</obj_property>
-         <obj_property name="ObjectShortName">PCOUT[47:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /P" type="array">
-         <obj_property name="ElementShortName">P[47:0]</obj_property>
-         <obj_property name="ObjectShortName">P[47:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /a_mult_mux" type="array">
-         <obj_property name="ElementShortName">a_mult_mux[26:0]</obj_property>
-         <obj_property name="ObjectShortName">a_mult_mux[26:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /b_mult_mux" type="array">
-         <obj_property name="ElementShortName">b_mult_mux[17:0]</obj_property>
-         <obj_property name="ObjectShortName">b_mult_mux[17:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /ADREG_REG" type="array">
-         <obj_property name="ElementShortName">ADREG_REG[31:0]</obj_property>
-         <obj_property name="ObjectShortName">ADREG_REG[31:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /AD_DATA" type="array">
-         <obj_property name="ElementShortName">AD_DATA[26:0]</obj_property>
-         <obj_property name="ObjectShortName">AD_DATA[26:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /AD_DATA_reg" type="array">
-         <obj_property name="ElementShortName">AD_DATA_reg[26:0]</obj_property>
-         <obj_property name="ObjectShortName">AD_DATA_reg[26:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /AD_in" type="array">
-         <obj_property name="ElementShortName">AD_in[26:0]</obj_property>
-         <obj_property name="ObjectShortName">AD_in[26:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /AD_in" type="array">
-         <obj_property name="ElementShortName">AD_in[26:0]</obj_property>
-         <obj_property name="ObjectShortName">AD_in[26:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /PREADD_AB" type="array">
-         <obj_property name="ElementShortName">PREADD_AB[26:0]</obj_property>
-         <obj_property name="ObjectShortName">PREADD_AB[26:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[0].AHEAD.u_dspA /A2A1" type="array">
-         <obj_property name="ElementShortName">A2A1[26:0]</obj_property>
-         <obj_property name="ObjectShortName">A2A1[26:0]</obj_property>
-      </wvobject>
    </wvobject>
    <wvobject fp_name="/biquad_working_tb/uut/u_pole_fir/fpcascade" type="array">
       <obj_property name="ElementShortName">fpcascade[2:0][47:0]</obj_property>
@@ -623,37 +561,21 @@
       <obj_property name="ObjectShortName">gpcascade[3:0][47:0]</obj_property>
       <obj_property name="isExpanded"></obj_property>
    </wvobject>
-   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].ATAIL.u_dspA /INMODE_in" type="array">
-      <obj_property name="ElementShortName">INMODE_in[4:0]</obj_property>
-      <obj_property name="ObjectShortName">INMODE_in[4:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].ATAIL.u_dspA /INMODE_mux" type="array">
-      <obj_property name="ElementShortName">INMODE_mux[4:0]</obj_property>
-      <obj_property name="ObjectShortName">INMODE_mux[4:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].ATAIL.u_dspA /INMODE_reg" type="array">
-      <obj_property name="ElementShortName">INMODE_reg[4:0]</obj_property>
-      <obj_property name="ObjectShortName">INMODE_reg[4:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].ATAIL.u_dspA /AD_DATA" type="array">
-      <obj_property name="ElementShortName">AD_DATA[26:0]</obj_property>
-      <obj_property name="ObjectShortName">AD_DATA[26:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].ATAIL.u_dspA /AD_DATA_reg" type="array">
-      <obj_property name="ElementShortName">AD_DATA_reg[26:0]</obj_property>
-      <obj_property name="ObjectShortName">AD_DATA_reg[26:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].ATAIL.u_dspA /AD_in" type="array">
-      <obj_property name="ElementShortName">AD_in[26:0]</obj_property>
-      <obj_property name="ObjectShortName">AD_in[26:0]</obj_property>
-   </wvobject>
    <wvobject fp_name="/biquad_working_tb/uut/y0_fir_out" type="array">
       <obj_property name="ElementShortName">y0_fir_out[47:0]</obj_property>
       <obj_property name="ObjectShortName">y0_fir_out[47:0]</obj_property>
+      <obj_property name="Radix">REALRADIX</obj_property>
+      <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
+      <obj_property name="radix_fractionWidth">27</obj_property>
+      <obj_property name="radix_otherWidth">0</obj_property>
    </wvobject>
    <wvobject fp_name="/biquad_working_tb/uut/y1_fir_out" type="array">
       <obj_property name="ElementShortName">y1_fir_out[47:0]</obj_property>
       <obj_property name="ObjectShortName">y1_fir_out[47:0]</obj_property>
+      <obj_property name="Radix">REALRADIX</obj_property>
+      <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
+      <obj_property name="radix_fractionWidth">27</obj_property>
+      <obj_property name="radix_otherWidth">0</obj_property>
    </wvobject>
    <wvobject fp_name="/biquad_working_tb/uut/u_incremental/y0_in" type="array">
       <obj_property name="ElementShortName">y0_in[29:0]</obj_property>
@@ -711,5 +633,53 @@
    <wvobject fp_name="/biquad_working_tb/uut/u_incremental/\INCR[3].this_bypass " type="logic">
       <obj_property name="ElementShortName">\INCR[3].this_bypass </obj_property>
       <obj_property name="ObjectShortName">\INCR[3].this_bypass </obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_pole_fir/\GLOOP[3].BODY.u_body /A1_reg" type="array">
+      <obj_property name="ElementShortName">A1_reg[29:0]</obj_property>
+      <obj_property name="ObjectShortName">A1_reg[29:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_pole_fir/\GLOOP[3].BODY.u_body /A2_reg" type="array">
+      <obj_property name="ElementShortName">A2_reg[29:0]</obj_property>
+      <obj_property name="ObjectShortName">A2_reg[29:0]</obj_property>
+      <obj_property name="Radix">REALRADIX</obj_property>
+      <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
+      <obj_property name="radix_fractionWidth">13</obj_property>
+      <obj_property name="radix_otherWidth">0</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_pole_fir/\GLOOP[3].BODY.u_body /B2_reg" type="array">
+      <obj_property name="ElementShortName">B2_reg[17:0]</obj_property>
+      <obj_property name="ObjectShortName">B2_reg[17:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_pole_fir/\GLOOP[3].BODY.u_body /C" type="array">
+      <obj_property name="ElementShortName">C[47:0]</obj_property>
+      <obj_property name="ObjectShortName">C[47:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_pole_fir/\GLOOP[3].BODY.u_body /A2_reg" type="array">
+      <obj_property name="ElementShortName">A2_reg[29:0]</obj_property>
+      <obj_property name="ObjectShortName">A2_reg[29:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_pole_fir/\GLOOP[3].BODY.u_body /B2_reg" type="array">
+      <obj_property name="ElementShortName">B2_reg[17:0]</obj_property>
+      <obj_property name="ObjectShortName">B2_reg[17:0]</obj_property>
+      <obj_property name="Radix">REALRADIX</obj_property>
+      <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
+      <obj_property name="radix_fractionWidth">14</obj_property>
+      <obj_property name="radix_otherWidth">0</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].ATAIL.u_dspA /A2_reg" type="array">
+      <obj_property name="ElementShortName">A2_reg[29:0]</obj_property>
+      <obj_property name="ObjectShortName">A2_reg[29:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].ATAIL.u_dspA /D_DATA_reg" type="array">
+      <obj_property name="ElementShortName">D_DATA_reg[26:0]</obj_property>
+      <obj_property name="ObjectShortName">D_DATA_reg[26:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/u_fir/\LP[3].u_dspB /A2_reg" type="array">
+      <obj_property name="ElementShortName">A2_reg[29:0]</obj_property>
+      <obj_property name="ObjectShortName">A2_reg[29:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/biquad_working_tb/uut/masked_bypass" type="array">
+      <obj_property name="ElementShortName">masked_bypass[5:0]</obj_property>
+      <obj_property name="ObjectShortName">masked_bypass[5:0]</obj_property>
    </wvobject>
 </wave_config>
