@@ -122,12 +122,14 @@ module pueo_surf6 #(parameter IDENT="SURF",
     // Build triggers off of the versioning.
     localparam USE_V3 = (VER_MINOR == 4'd5) ? "FALSE" : "TRUE";
     localparam FULL_BEAMS = (USE_LF == "TRUE") ? 48 : ((USE_V3 == "TRUE") ? NUM_BEAM : `NUM_V2_BEAMS);
-
+    
     localparam LF_TRIGGER_TYPE = "LFV";
 
     localparam TRIGGER_TYPE = (USE_LF == "TRUE") ? LF_TRIGGER_TYPE : ((USE_V3 == "TRUE") ? "V31500" : "V2");
     
-    localparam NBEAMS = VER_REV[0] ? NUM_DUMMY : FULL_BEAMS;
+//    localparam NBEAMS = VER_REV[0] ? NUM_DUMMY : FULL_BEAMS;
+    // no more dummy builds
+    localparam NBEAMS = FULL_BEAMS;
     localparam USE_BIQUADS = (USE_LF == "TRUE") ? "FALSE" : "TRUE";
     
     // ok, this is getting ridiculous, so just shift to another register.
