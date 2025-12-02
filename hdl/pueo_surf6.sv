@@ -126,7 +126,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
     localparam LF_TRIGGER_TYPE = "LFV";
 
     localparam TRIGGER_TYPE = (USE_LF == "TRUE") ? LF_TRIGGER_TYPE : ((USE_V3 == "TRUE") ? "V31500" : "V2");
-    
+
 //    localparam NBEAMS = VER_REV[0] ? NUM_DUMMY : FULL_BEAMS;
     // no more dummy builds
     localparam NBEAMS = FULL_BEAMS;
@@ -448,8 +448,9 @@ module pueo_surf6 #(parameter IDENT="SURF",
     reg [NCHAN*NSAMP*NBITS-1:0] trig_dout_reg = {NCHAN*NSAMP*NBITS{1'b0}};
     always @(posedge aclk) adc_dout_reg <= adc_dout;
     always @(posedge tclk) begin
-        pipe_reg <= adc_dout_reg;
-        trig_dout_reg <= pipe_reg;
+        trig_dout_reg <= adc_dout_reg;
+//        pipe_reg <= adc_dout_reg;
+//        trig_dout_reg <= pipe_reg;
     end        
     
     wire [7:0] adc_sig_detect;
