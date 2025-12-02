@@ -35,6 +35,7 @@ hdl/pueo-surf-trigger/hdl/agc_dsp.sv
 hdl/pueo-surf-trigger/hdl/agc_wrapper.sv
 hdl/pueo-surf-trigger/hdl_v3/beam_meta_builder.sv
 hdl/pueo-surf-trigger/hdl_v3/beam_meta_nybble.sv
+hdl/pueo-surf-trigger/hdl_lf/beamform_trigger_lowampa.sv
 hdl/pueo-surf-trigger/hdl_v2/beamform_trigger_v2.sv
 hdl/pueo-surf-trigger/hdl_v2/beamform_trigger_v2b.sv
 hdl/pueo-surf-trigger/hdl_v3/beamform_trigger_v3.sv
@@ -43,6 +44,8 @@ hdl/pueo-surf-trigger/hdl_v2/beamscaler_wb_wrap.sv
 hdl/pueo-surf-trigger/hdl_v2/beamscaler_wrap.sv
 verilog-library-barawn/hdl/filters/biquad8_incremental_v2.sv
 verilog-library-barawn/hdl/filters/biquad8_pole_fir_v2.sv
+verilog-library-barawn/hdl/filters/biquad8_pole_iir_v2.sv
+verilog-library-barawn/hdl/filters/biquad8_single_zero_fir_v2.sv
 verilog-library-barawn/hdl/filters/biquad8_wrapper.sv
 verilog-library-barawn/hdl/filters/biquad8_wrapper_v2.sv
 hdl/pueo-surf-trigger/hdl/biquad8_x2_wrapper.sv
@@ -50,9 +53,12 @@ hdl/turfio/bit_align.sv
 hdl/serial_if/boardman_wrapper.sv
 hdl/clock/clock_generator.sv
 hdl/cmdproc_buffer.sv
+hdl/pueo-surf-trigger/hdl_lf/dual_pueo_beam_lowampa_v2.sv
 hdl/pueo-surf-trigger/hdl_v2/dual_pueo_beam_v2.sv
+hdl/pueo-surf-trigger/hdl_lf/dual_pueo_beamform_lowampa_v2.sv
 hdl/pueo-surf-trigger/hdl_v2/dual_pueo_beamform_v2.sv
 hdl/pueo-surf-trigger/hdl_v2/dual_pueo_envelope_v2.sv
+hdl/pueo-surf-trigger/hdl_lf/dual_pueo_lowampa_envelope_v2c.sv
 hdl/pueo-surf-trigger/hdl_v2/dual_pueo_threshold_v2.sv
 verilog-library-barawn/hdl/fir_dsp_core.sv
 verilog-library-barawn/hdl/math/fivebit_8way_ternary.sv
@@ -63,8 +69,7 @@ hdl/uram/fwupd_uaddr.sv
 hdl/pueo-surf-trigger/hdl_v2/generator_wb_core.sv
 hdl/pueo-surf-trigger/hdl_v2/generator_wrap.sv
 hdl/pueo-surf-trigger/hdl/lfsr_rms_mux.sv
-hdl/pueo-surf-trigger/hdl_lf/lowampa_match_dsp.sv
-hdl/pueo-surf-trigger/hdl_lf/lowampa_matched_filter_v2.sv
+hdl/pueo-surf-trigger/hdl_lf/lowampa_matched_filter_v3.sv
 hdl/pueo-surf-trigger/hdl_lf/lowampa_trigger_chain_wrapper.sv
 hdl/pueo-surf-trigger/hdl_lf/lowampa_trigger_chain_x8_wrapper.sv
 verilog-library-barawn/hdl/filters/lp_four_to_six.sv
@@ -126,10 +131,8 @@ hdl/pueo-surf-trigger/hdl_v2/wb_thresholds.sv
 hdl/pueo-surf-trigger/hdl/xil_tiny_lfsr_3bit.sv
 verilog-library-barawn/hdl/beamthresh/ternary_adder.vhd
 hdl/pueo_surf6.sv
-hdl/pueo-surf-trigger/hdl_lf/beamform_trigger_lowampa.sv
-hdl/pueo-surf-trigger/hdl_lf/dual_pueo_beam_lowampa_v2.sv
-hdl/pueo-surf-trigger/hdl_lf/dual_pueo_beamform_lowampa_v2.sv
-hdl/pueo-surf-trigger/hdl_lf/dual_pueo_lowampa_envelope_v2c.sv
+hdl/pueo-surf-trigger/hdl_lf/lowampa_match_dsp.sv
+hdl/pueo-surf-trigger/hdl_lf/lowampa_matched_filter_v2.sv
 hdl/pueo-surf-trigger/hdl_lf/dual_pueo_lowampa_envelope_v2b.sv
 hdl/pueo-surf-trigger/hdl_lf/dual_pueo_lowampa_envelope_v2.sv
 hdl/pueo-surf-trigger/hdl_v2/surf_trig_gen_v2.sv
@@ -145,6 +148,4 @@ hdl/interphi/interphi_ibert_wrapper.sv
 verilog-library-barawn/hdl/math/seven_bit_square.sv
 hb.coe
 hdl/pueo-surf-trigger/hdl_lf/beamform_lowampa.sv
-verilog-library-barawn/hdl/filters/biquad8_single_zero_fir_v2.sv
-verilog-library-barawn/hdl/filters/biquad8_pole_iir_v2.sv
 verilog-library-barawn/hdl/distram14_delay.sv
