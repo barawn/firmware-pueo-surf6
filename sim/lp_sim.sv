@@ -87,6 +87,7 @@ module lp_sim;
 
     wire [7:0][11:0] mf_out;
     wire [3:0][11:0] mf2_out;
+    wire [3:0][11:0] notch_out;
 //    wire [7:0][15:0] systA_out;
 //    wire [7:0][15:0] systA1_out;
 //    wire [7:0][15:0] systB_out;
@@ -380,6 +381,11 @@ module lp_sim;
                                mf2(.aclk(clk),
                                    .data_i(adc_indata1500),
                                    .data_o(mf2_out));
+
+    half_notch4 #(.NBITS(12))
+        notch(.clk_i(clk),
+              .dat_i(adc_indata1500),
+              .dat_o(notch_out));
                                                
     shannon_whitaker_lpfull_v4 #(.INBITS(12))
                                uut(.clk_i(clk),
@@ -407,11 +413,11 @@ module lp_sim;
     initial begin
         #100;
         @(posedge clk);
-        #0.1 adc_indata[6] = 16'hFC00;
-//             adc_indata[4] = 16'd1000;
+//        #0.1 adc_indata[6] = 16'hFC00;
+          #0.1 adc_indata[4] = 16'd1000;
         @(posedge clk);
-        #0.1 adc_indata[6] = 16'd0;
-//             adc_indata[4] = 16'd0;
+//        #0.1 adc_indata[6] = 16'd0;
+          #0.1 adc_indata[4] = 16'd0;
         #100;
         @(posedge clk);
         #0.1 adc_indata[0] = 16'hFC00;
