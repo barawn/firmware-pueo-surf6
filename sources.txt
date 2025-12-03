@@ -149,3 +149,5 @@ verilog-library-barawn/hdl/math/seven_bit_square.sv
 hb.coe
 hdl/pueo-surf-trigger/hdl_lf/beamform_lowampa.sv
 verilog-library-barawn/hdl/distram14_delay.sv
+verilog-library-barawn/hdl/filters/seventap_systolic_preadd.sv
+verilog-library-barawn/hdl/filters/half_notch4.sv
