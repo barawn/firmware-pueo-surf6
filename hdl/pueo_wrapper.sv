@@ -41,6 +41,8 @@ module pueo_wrapper #(parameter NBITS=12,
                 
         // this is the bullshit stream program interface
         // from idctrl
+        input [23:0] rdholdoff_i,
+        // from idctrl
         input       fw_loading_i,
         // this is in aclk domain 
         input [7:0] fw_tdata,
@@ -61,6 +63,21 @@ module pueo_wrapper #(parameter NBITS=12,
     wire [NCHAN-1:0] dout_valid;
 
     assign data_vec = ch_dat_i;    
+
+    // We previously had trigger holdoffs of 65535*8 ns = 524,280 ns
+    // Our event size is 98,336 bits. At 500 Mbit/s this is
+    // 196,672 ns. This means a nominally equivalent read holdoff is
+    // roughly 20475. This ignores the trigger transmission time because
+    // that would have been pipelined through anyway. 
+    // THIS IS CAPTURED AT RUN START
+    (* CUSTOM_CC_DST = IFCLKTYPE *)
+    reg [23:0] current_rdholdoff = 24'd20475;
+    (* CUSTOM_MC_DST_TAG = "RUNRST" *)
+    reg run_rst_ifclk = 0;
+    always @(posedge ifclk_i) begin
+        run_rst_ifclk <= run_rst_i;
+        if (run_rst_ifclk) current_rdholdoff <= rdholdoff_i;
+    end
     
     // RESETS
     // comes from pueo_uram_v4 when not running.
@@ -137,6 +154,7 @@ module pueo_wrapper #(parameter NBITS=12,
                                .trig_time_i(trig_time_i),
                                .event_no_i(trig_num),
                                .trig_valid_i(trig_time_valid_i),
+                               .rdholdoff_i(current_rdholdoff),
                                .dout_data_o(dout_data_o),
                                .dout_data_valid_o(dout_data_valid_o),
                                .dout_data_phase_i(dout_data_phase_i),

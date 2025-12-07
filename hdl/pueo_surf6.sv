@@ -25,8 +25,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter DEVICE="GEN3",
                     parameter USE_LF = "FALSE",
                     parameter [3:0] VER_MAJOR = 4'd0,
-                    parameter [3:0] VER_MINOR = 4'd6,
-                    parameter [7:0] VER_REV = 8'd48,
+                    parameter [3:0] VER_MINOR = 4'd7,
+                    parameter [7:0] VER_REV = 8'd0,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -427,6 +427,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     `CONNECT_WBM_IFM( levelone_ , levelone_ ),
                     `CONNECT_WBM_IFM( rfdc_ , rfdc_ ));
 
+    wire [23:0] rdholdoff;
+
     // ok, here we go, folks
     wire rfdc_bridge_err;
     wire sysref_pl;
@@ -766,6 +768,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                   
                   .rundo_sync_i(wbclk_do_sync),
                   .runnoop_live_i(wbclk_noop_live),
+
+                  .rdholdoff_o(rdholdoff),
                   
                   .sysref_phase_i(sysref_phase),
                   .rfdc_rst_o(rfdc_reset),
@@ -970,6 +974,8 @@ module pueo_surf6 #(parameter IDENT="SURF",
                         
                         .trig_time_i( trigger_time ),
                         .trig_time_valid_i( trigger_time_valid ),
+                        
+                        .rdholdoff_i(rdholdoff),
                         
                         .dout_data_o(dout_data),
                         .dout_data_valid_o(dout_data_valid),

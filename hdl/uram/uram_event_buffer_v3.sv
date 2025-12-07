@@ -88,6 +88,8 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
         output [1:0] fwmon_wr_o,
         // comes from idctrl
         input        fw_load_i,
+        // this is in ifclk
+        input [23:0] rdholdoff_i,
         // output data. 
         output [7:0] dout_data_o,
         output       dout_data_valid_o,
@@ -496,6 +498,7 @@ module uram_event_buffer_v3 #(parameter NCHAN = 8,
     wire [7:0] fw_uaddr;
     uram_event_readout_sm u_sm(.clk_i(ifclk_i),
                                .clk_ce_i(dout_data_phase_i),
+                               .rdholdoff_i(rdholdoff_i),
                                .data_available_i(data_available),
                                .complete_o(readout_complete),
                                .bram_addr_o(bram_raddr),

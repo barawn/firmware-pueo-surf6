@@ -12,6 +12,8 @@ module surf_id_ctrl(
         output [7:0] gpo_o,
         output [4:0] sync_offset_o,
         
+        output [23:0] rdholdoff_o,
+        
         input rundo_sync_i,
         input runnoop_live_i,
         
@@ -81,6 +83,9 @@ module surf_id_ctrl(
     
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg rfdc_stream_reset = 1;
+    localparam [23:0] RDHOLDOFF_DEFAULT = 24'd20475;
+    (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
+    reg [23:0] rdholdoff = RDHOLDOFF_DEFAULT;
     
     // top 8 bits are a global stat: top bit is TURFIO ready
     wire [31:0] ctrlstat_reg = { rackclk_ok_o, {5{1'b0}}, rfdc_stream_reset, watchdog_trigger_enable,
@@ -151,7 +156,8 @@ module surf_id_ctrl(
     // reg 7
     `WISHBONE_ADDRESS( 12'h01C, TRIGGER_CONFIG, OUTPUT, [31:0], 0);
 //    assign wishbone_registers[7] = wishbone_registers[3];
-    assign wishbone_registers[8] = wishbone_registers[0];
+    `WISHBONE_ADDRESS( 12'h020, rdholdoff, SIGNALRESET, [23:0], RDHOLDOFF_DEFAULT );
+//    assign wishbone_registers[8] = wishbone_registers[0];
     assign wishbone_registers[9] = wishbone_registers[1];
     assign wishbone_registers[10] = wishbone_registers[2];
     assign wishbone_registers[11] = wishbone_registers[3];
@@ -298,5 +304,7 @@ module surf_id_ctrl(
     assign rfdc_rst_o = rfdc_stream_reset;
     
     assign adc_cal_freeze_o = cal_freeze;
+
+    assign rdholdoff_o = rdholdoff;
     
 endmodule

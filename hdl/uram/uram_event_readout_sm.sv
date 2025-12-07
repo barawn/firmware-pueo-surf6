@@ -8,6 +8,7 @@ module uram_event_readout_sm(
         input clk_i,
         input clk_ce_i,        
         input data_available_i,
+        input [23:0] rdholdoff_i,
         output complete_o,
         output [8:0] bram_addr_o,
         output [2:0] bram_en_o,
@@ -81,6 +82,7 @@ module uram_event_readout_sm(
     localparam [FSM_BITS-1:0] FW1                       = 9;  // 9
     localparam [FSM_BITS-1:0] FW2                       = 10;  // 10
     localparam [FSM_BITS-1:0] FW3                       = 11;  // 11
+    localparam [FSM_BITS-1:0] PAUSE                     = 12;  // whatever
     (* CUSTOM_MC_DST_TAG = "FW_VALID", FSM_ENCODING = "user_encoding" *)
     reg [FSM_BITS-1:0] state = HEADER0;
     (* CUSTOM_MC_DST_TAG = "FW_VALID" *)
@@ -107,11 +109,22 @@ module uram_event_readout_sm(
     wire advance_address = (state == DATA2 && active_bram[2] && clk_ce_i) || (fw_loading_i && fw_advance_address);   
     
     reg mark_reset = 0;
-    
+
+    (* USE_DSP = "YES" *)
+    reg [24:0] rdholdoff_counter = {25{1'b0}};
+    wire rdholdoff_reset = (state != DATA0 && state != PAUSE);
+    wire rdholdoff_load = (state == DATA0 && readout_complete);
+    wire rdholdoff_run = (state == PAUSE);
     // NOTE NOTE NOTE NOTE NOTE NOTE NOTE
     // YOU ALWAYS HAVE TO TRANSFER AT LEAST 4 BYTES EACH TIME,
     // YOU CAN'T DO 3 BYTES THEN MARK    
     always @(posedge clk_i) begin
+        if (rdholdoff_reset) rdholdoff_counter <= {25{1'b0}};
+        else if (clk_ce_i) begin
+            if (rdholdoff_load) rdholdoff_counter <= {1'b0, rdholdoff_i};
+            else if (rdholdoff_run) rdholdoff_counter <= rdholdoff_counter - 1;
+        end
+
         if (clk_ce_i) fw_wr_stretch <= 0;
         else if (fw_wr_i) fw_wr_stretch <= 1;
 
@@ -125,11 +138,12 @@ module uram_event_readout_sm(
                 HEADER1: state <= HEADER2;
                 HEADER2: state <= HEADER3;
                 HEADER3: state <= DATA0;
-                DATA0: if (readout_complete) state <= HEADER0;
+                DATA0: if (readout_complete) state <= PAUSE;
                        else state <= DATA1;
                 DATA1: state <= DATA2;
                 DATA2: state <= DATA3;
                 DATA3: state <= DATA0;
+                PAUSE: if (rdholdoff_counter[24]) state <= HEADER0;
                 FW0: if (!fw_loading_i) state <= HEADER0;
                      else if (fw_wr_i || fw_wr_stretch) state <= FW1;
                 FW1: if (!fw_loading_i) state <= HEADER0;
