@@ -78,13 +78,22 @@ module pueo_uram_v3_tb;
     reg        addr_tvalid = 1'b0;
     wire       addr_tready;
     wire       begin_readout;
+    
+    reg        run_rst = 0;
+    reg        run_stop = 0;
+    
+    wire event_rst_memclk;
+    wire event_rst_aclk;
+    
     pueo_uram_v4 #(.SCRAMBLE_OPT("TRUE"))
         uut(.aclk(aclk),
-            .aclk_rst_i(aclk_reset),
             .aclk_sync_i(aclk_sync),
             .memclk(memclk),
-            .memclk_rst_i(memclk_reset),
             .memclk_sync_i(memclk_sync),
+            .run_rst_i(run_rst),
+            .run_stop_i(run_stop),
+            .event_rst_o(event_rst_memclk),
+            .event_rst_aclk_o(event_rst_aclk),
             .dat_i(data_vec),
             .begin_o(begin_readout),
             .dat_o(dout_vec),
@@ -105,23 +114,31 @@ module pueo_uram_v3_tb;
     reg        fw_load = 0;
     reg        fw_wr = 0;
     
+    reg [23:0] rdholdoff = 24'd16383;
+    
     uram_event_buffer_v3 u_evbuf( .memclk_i(memclk),
-                               .memclk_rst_i(memclk_reset),
+                               .memclk_rst_i(event_rst_memclk),
+                               .aclk_i(aclk),
+                               .aclk_rst_i(event_rst_aclk),
                                .ifclk_i(syncclk),
-                               .ifclk_rst_i(ifclk_reset),
+                               .ifclk_rst_i(1'b0),
                                .begin_i(begin_readout),
                                .dat_i(dout_vec),
                                .dat_valid_i(dout_valid),
                                .trig_time_i(trig_time),
                                .event_no_i(trig_num),
                                .trig_valid_i(trig_valid),
+                               .rdholdoff_i(rdholdoff),
                                .dout_data_o(ev_tdata),
                                .dout_data_valid_o(ev_tvalid),
                                .dout_data_phase_i(syncclk_phase),
+                               // n.b. this isn't even hooked up anywhere
                                .dout_data_last_o(ev_tlast),
                                .fw_dat_i(fw_dat),
                                .fw_load_i(fw_load),
-                               .fw_wr_i(fw_wr)
+                               .fw_wr_i(fw_wr),
+                               // don't use, not testing firmware update
+                               .fw_mark_i(2'b00)
                                );
 
     integer c,s;
@@ -175,10 +192,13 @@ module pueo_uram_v3_tb;
         
             
         #100;
+
         @(posedge aclk);
-        #1 aclk_reset = 1;
+        while (!aclk_sync) @(posedge aclk);
+        #0.1 run_rst <= 1;
         @(posedge aclk);
-        #1 aclk_reset = 0;
+        while (!aclk_sync) @(posedge aclk);
+        #0.1 run_rst <= 0;
         
         #1000;
         @(posedge memclk);
@@ -192,6 +212,11 @@ module pueo_uram_v3_tb;
         @(posedge memclk);
         #0.1 trig_valid = 0;
         
+        #100;
+        @(posedge memclk);
+        #0.1 trig_time = 90; trig_num = 2; trig_valid = 1;
+        @(posedge memclk);
+        #0.1 trig_valid = 0;
     end
     
 endmodule
