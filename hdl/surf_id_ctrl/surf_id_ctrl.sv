@@ -83,7 +83,7 @@ module surf_id_ctrl(
     
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg rfdc_stream_reset = 1;
-    localparam [23:0] RDHOLDOFF_DEFAULT = 24'd20475;
+    localparam [23:0] RDHOLDOFF_DEFAULT = 24'd16383;
     (* CUSTOM_CC_SRC = WB_CLK_TYPE *)
     reg [23:0] rdholdoff = RDHOLDOFF_DEFAULT;
     
