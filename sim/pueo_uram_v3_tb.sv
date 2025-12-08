@@ -214,6 +214,12 @@ module pueo_uram_v3_tb;
         
         #100;
         @(posedge memclk);
+        #0.1 addr_tdata = 16'h0100;
+        addr_tvalid = 1'b1;
+        @(posedge memclk);
+        while (!addr_tready) @(posedge memclk);
+        #0.1 addr_tvalid = 1'b0;        
+        @(posedge memclk);
         #0.1 trig_time = 90; trig_num = 2; trig_valid = 1;
         @(posedge memclk);
         #0.1 trig_valid = 0;
