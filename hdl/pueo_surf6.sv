@@ -26,7 +26,7 @@ module pueo_surf6 #(parameter IDENT="SURF",
                     parameter USE_LF = "FALSE",
                     parameter [3:0] VER_MAJOR = 4'd0,
                     parameter [3:0] VER_MINOR = 4'd7,
-                    parameter [7:0] VER_REV = 8'd0,
+                    parameter [7:0] VER_REV = 8'd1,
                     // this gets autofilled by pre_synthesis.tcl
                     parameter [15:0] FIRMWARE_DATE = {16{1'b0}},
                     // we have multiple GTPCLK options
@@ -130,10 +130,10 @@ module pueo_surf6 #(parameter IDENT="SURF",
 //    localparam NBEAMS = VER_REV[0] ? NUM_DUMMY : FULL_BEAMS;
     // no more dummy builds
     localparam NBEAMS = FULL_BEAMS;
-    localparam USE_BIQUADS = (USE_LF == "TRUE") ? "FALSE" : "TRUE";
+    localparam USE_BIQUADS = (USE_LF == "TRUE") ? "FALSE" : "FALSE";
     
     // ok, this is getting ridiculous, so just shift to another register.
-    localparam [31:0] MIE_TRIGGER_VERSION = 3;
+    localparam [31:0] MIE_TRIGGER_VERSION = 4;
     // set bit 8 if biquads exist
     localparam [31:0] MIE_TRIGGER_CONFIG = MIE_TRIGGER_VERSION + ((USE_BIQUADS == "TRUE") ? 32'h100 : 32'h0);
     // set bit 24 if it's LF
